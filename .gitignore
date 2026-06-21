@@ -1,1 +1,7 @@
 dokumenty/Notatki/Notatki_Chinczyk/.obsidian/workspace.json
+
+#env
+.env
+.env.*
+!.env.example
+!.env.test
