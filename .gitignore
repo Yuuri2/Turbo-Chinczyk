@@ -5,3 +5,6 @@ dokumenty/Notatki/Notatki_Chinczyk/.obsidian/workspace.json
 .env.*
 !.env.example
 !.env.test
+
+#logi
+*.log
