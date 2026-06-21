@@ -44,4 +44,4 @@ CREATE TABLE tokens (
 -- NIE ZAPOMNIEC USUNAC
 
 INSERT into users (name, password)
-values ("admin", "admin");
+values ('admin', 'admin');
