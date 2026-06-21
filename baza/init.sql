@@ -40,3 +40,8 @@ CREATE TABLE tokens (
         REFERENCES users(id) 
         ON DELETE CASCADE
 );
+
+-- NIE ZAPOMNIEC USUNAC
+
+INSERT into users (name, password)
+values ("admin", "admin");
