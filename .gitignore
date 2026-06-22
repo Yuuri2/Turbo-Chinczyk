@@ -8,3 +8,6 @@ dokumenty/Notatki/Notatki_Chinczyk/.obsidian/workspace.json
 
 #logi
 *.log
+
+#claude
+.claude
