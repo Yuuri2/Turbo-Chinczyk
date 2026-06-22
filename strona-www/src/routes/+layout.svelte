@@ -1,7 +1,8 @@
 <script lang="ts">
 	import favicon from '$lib/assets/favicon.svg';
+	import LogountButton from '$lib/components/LogountButton.svelte';
 
-	let { children } = $props();
+	let { data, children } = $props();
 </script>
 
 <svelte:head>
@@ -10,7 +11,15 @@
 
 <div id="navbar">
 	<h4>chińczyk</h4>
-	<a href="/login" id="login">login</a>
+	<div>
+		{#if data.user}
+			<p>zalogowano jako: <b>{data.user.name}</b></p><LogountButton></LogountButton>
+		{:else}
+			<a href="/login" id="login">login</a>
+			<br>
+			<a href="/register">register</a>
+		{/if}
+	</div>
 </div>
 
 {@render children()}

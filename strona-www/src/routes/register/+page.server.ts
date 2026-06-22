@@ -1,9 +1,6 @@
-import { error, type Actions } from "@sveltejs/kit";
-import { passCheck } from "$lib/server/login";
-import { fail } from "@sveltejs/kit";
+import { type Actions, error, fail } from "@sveltejs/kit";
+import { createAccount } from "$lib/server/register";
 import { createSessionForId, setCookieSession } from "$lib/server/auth";
-
-
 
 export const actions: Actions = {
     default: async ({ request, cookies }) => {
@@ -19,18 +16,17 @@ export const actions: Actions = {
             });
         }
 
-        let userId = await passCheck(login, password);
+        const userId = await createAccount(login, password);
 
-        if (!userId){
+        if(!userId){
             return fail(400, {
                 error: true,
-                message: "zły login lub hasło",
-                login
+                message: "login już zajęty",
+                login: ""
             });
         }
 
         const sessionId = await createSessionForId(userId);
-
         setCookieSession(cookies, sessionId);
 
         return {
