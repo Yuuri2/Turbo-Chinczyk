@@ -10,7 +10,7 @@
         <br>
         <input type="password" name="password" id="password" placeholder="hasło" required>
         <br>
-        <button type="submit" id="submit">login</button>
+        <button type="submit" id="submit">register</button>
     </div>
 </form>
 {#if form?.success}
