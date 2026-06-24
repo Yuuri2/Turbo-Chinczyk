@@ -41,7 +41,36 @@ CREATE TABLE tokens (
         ON DELETE CASCADE
 );
 
--- NIE ZAPOMNIEC USUNAC
+-- 1. Definiujemy statusy pokoju
+CREATE TYPE room_status AS ENUM ('waiting', 'playing', 'finished');
 
+-- 2. Tworzymy tabelę pokoi
+CREATE TABLE rooms (
+    id SERIAL PRIMARY KEY,
+    name VARCHAR(100) NOT NULL,
+    password VARCHAR(50) DEFAULT NULL,
+    status room_status DEFAULT 'waiting' NOT NULL,
+    
+    -- NOWOŚĆ: ID gracza, który założył pokój i ma uprawnienia hosta
+    host_id INT NOT NULL, 
+    
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    
+    -- Klucz obcy - jeśli użytkownik usunie konto, jego pokój zniknie
+    CONSTRAINT fk_host FOREIGN KEY (host_id) REFERENCES users(id) ON DELETE CASCADE
+);
+
+-- 3. Tworzymy tabelę łączącą graczy z pokojami
+CREATE TABLE room_players (
+    room_id INT NOT NULL,
+    userid INT NOT NULL,
+    joined_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    
+    PRIMARY KEY (room_id, userid),
+    CONSTRAINT fk_room FOREIGN KEY (room_id) REFERENCES rooms(id) ON DELETE CASCADE,
+    CONSTRAINT fk_user FOREIGN KEY (userid) REFERENCES users(id) ON DELETE CASCADE
+);
+
+-- NIE ZAPOMNIEC USUNAC
 INSERT into users (name, password)
 values ('admin', 'admin');
