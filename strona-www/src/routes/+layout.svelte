@@ -11,6 +11,7 @@
 
 <div id="navbar">
 	<h4>chińczyk</h4>
+	<a href="/leaderboard">leaderboard</a>
 	<div>
 		{#if data.user}
 			<p>zalogowano jako: <b>{data.user.name}</b></p><LogountButton></LogountButton>
