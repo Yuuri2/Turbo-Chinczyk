@@ -23,7 +23,7 @@
         <div class="lobby">
             {lobby.name} 
             {lobby.id} 
-            <button on:click={() => join(lobby.id)}>join</button>
+            <button onclick={() => join(lobby.id)}>join</button>
         </div>
     {/each}
 </div>
