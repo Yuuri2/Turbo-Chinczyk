@@ -1,4 +1,4 @@
-import { addUserToLobby, DoesLobbyHavePassword, isPasswordCorrect, isUserInLobby } from "$lib/server/lobby";
+import { addUserToLobby, DoesLobbyHavePassword, isPasswordCorrect, isUserInLobby, lobbyInformation, usersInLobby } from "$lib/server/lobby";
 import { fail, redirect, type Actions, type ServerLoad } from "@sveltejs/kit";
 
 export const load: ServerLoad = async ({ params, locals }) => {
@@ -12,9 +12,10 @@ export const load: ServerLoad = async ({ params, locals }) => {
         throw redirect(307, "/lobby/lobbies");
     }
 
+    const users = await usersInLobby(lobbyId);
+
     return {
-        lobbyId,
-        git: "gitara Siema"
+        LobbyInfo: await lobbyInformation(lobbyId)
     }
 }
 

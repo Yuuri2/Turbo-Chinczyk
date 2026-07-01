@@ -112,3 +112,46 @@ export async function isUserInLobby(userId: number, lobbyId: number): Promise<bo
 
     return false;
 }
+
+export async function usersInLobby(lobbyId: number): Promise<string[]> {
+    const query = `
+        SELECT u.name 
+        FROM room_players rp
+        JOIN users u ON rp.userid = u.id
+        WHERE rp.room_id = $1
+        ORDER BY rp.joined_at ASC;
+    `;
+
+    try {
+        const res = await pool.query(query, [lobbyId]);
+        
+        return res.rows.map(row => row.name);
+    } catch (err) {
+        console.error("Błąd podczas pobierania graczy z lobby:", err);
+        throw err;
+    }
+}
+
+export async function lobbyInformation(lobbyId: number): Promise<{lobbyId: number, name: string, users: string[]}> {
+    try {
+        // 1. Pobieramy nazwę pokoju z tabeli rooms
+        const roomRes = await pool.query("SELECT name FROM rooms WHERE id = $1;", [lobbyId]);
+        
+        if (roomRes.rows.length === 0) {
+            throw new Error(`Lobby o ID ${lobbyId} nie istnieje.`);
+        }
+
+        const roomName = roomRes.rows[0].name;
+
+        const users = await usersInLobby(lobbyId);
+
+        return {
+            lobbyId,
+            name: roomName,
+            users
+        };
+    } catch (err) {
+        console.error(`Błąd podczas pobierania pełnych informacji o lobby ${lobbyId}:`, err);
+        throw err;
+    }
+}

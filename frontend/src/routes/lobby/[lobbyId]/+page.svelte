@@ -6,10 +6,16 @@
     let { data } = $props();
 
     onMount(() => {
-        connectToLobby(data.lobbyId);
+        connectToLobby(data.LobbyInfo.lobbyId);
     });
 </script>
 
-<h1>LOBBY</h1>
-<h2>{data.lobbyId}</h2>
-<h3>{data.git}</h3>
+<h1>LOBBY: {data.LobbyInfo.name}</h1>
+<div>
+    <h2>gracze</h2>
+    <ol>
+        {#each data.LobbyInfo.users as user}
+            <li>{user}</li>
+        {/each}
+    </ol>
+</div>

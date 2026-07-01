@@ -1,4 +1,4 @@
-import { type ServerLoad, type Actions, fail } from "@sveltejs/kit";
+import { type ServerLoad, type Actions, fail, redirect, isRedirect } from "@sveltejs/kit";
 import { createLobby, currentWaitingLobbies } from "$lib/server/lobby";
 
 
@@ -25,13 +25,12 @@ export const actions: Actions = {
         try {
             const lobbyId = await createLobby(name, locals.user.id, password);
             
-
-
-            return {
-                lobbyId,
-                success: true
-            }
+            throw redirect(303, `/lobby/${lobbyId}`);
         } catch(err) {
+            if(isRedirect(err)){
+                throw err;
+            }
+
             console.error(err);
             return fail(500, {
                 error: true,
