@@ -5,8 +5,8 @@ import { createLobby, currentWaitingLobbies } from "$lib/server/lobby";
 export const actions: Actions = {
     createLobby: async ({ request, locals }) => {
         const formData = await request.formData();
-        const name = formData.get("name")?.toString();
-        const password = formData.get("password")?.toString();
+        const name = formData.get("name")?.toString().trim() || null;
+        const password = formData.get("password")?.toString().trim() || null;
 
         if(!name) {
             return fail(400, {
@@ -23,8 +23,10 @@ export const actions: Actions = {
         }
 
         try {
-            const lobbyId = await createLobby(name, locals.user.id, password ?? null);
-            console.log(lobbyId);
+            const lobbyId = await createLobby(name, locals.user.id, password);
+            
+
+
             return {
                 lobbyId,
                 success: true

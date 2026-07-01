@@ -11,6 +11,7 @@
 <div>
     <form action="?/createLobby" method="POST" use:enhance>
         <input type="text" name="name" id="formName">
+        <input type="text" name="password" id="formPassword">
         <button type="submit">stwórz</button>
     </form>
     {#if form?.error}
@@ -22,8 +23,13 @@
     {#each data.lobbies as lobby}
         <div class="lobby">
             {lobby.name} 
-            {lobby.id} 
-            <button onclick={() => join(lobby.id)}>join</button>
+            {lobby.id}
+            <form action="/lobby/{lobby.id}?/join" method="POST" use:enhance>
+                <button type="submit">join</button>
+                {#if lobby.is_private}
+                    <input type="text" name="password">
+                {/if}
+            </form>
         </div>
     {/each}
 </div>

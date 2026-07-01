@@ -35,7 +35,14 @@ export async function createLobby(name: string, hostId: number, password: string
 }
 
 export async function addUserToLobby(userId: number, lobbyId: number) {
-    pool.query(insertUserToLobbyQuery, [userId, lobbyId]);
+    try {
+        await pool.query(insertUserToLobbyQuery, [userId, lobbyId]);
+    } catch (err: any) {
+        if (err.code === '23505') {
+            throw new Error("już jesteś w tym lobby");
+        }
+        throw err;
+    }
 }
 
 export async function currentWaitingLobbies() {
@@ -57,4 +64,51 @@ export async function currentWaitingLobbies() {
     const res = await pool.query(waitingLobbiesQuery);
 
     return res.rows as {id: number, name: string, host_id: number, host_name: string, is_private: boolean, current_players: number}[]
+}
+
+export async function isPasswordCorrect(lobbyId: number, password: string): Promise<boolean> {
+    const query = `
+        select password from rooms where id = $1 and password = $2;
+    `;
+    const res = await pool.query(query, [lobbyId, password]);
+    
+    if (res.rows.length === 0) return false;
+
+    const resPassword = res.rows[0].password;
+    if(resPassword === null) return true;
+
+    return resPassword === password;
+}
+
+// zapomniałem że ta funkcja już istnieje
+// export async function JoinUserToLobby(userId: number, lobbyId: number) {
+//     const joinQuery = `
+//         insert into room_players (userid, room_id) values ($1, $2);
+//     `;
+
+//     await pool.query(joinQuery, [userId, lobbyId]);
+// }
+
+export async function DoesLobbyHavePassword(lobbyId: number): Promise<boolean> {
+    const query = `
+        select password from rooms where id = $1;
+    `;
+
+    let res = await pool.query(query, [lobbyId]);
+
+    if( res.rows.length === 0 ) return true
+
+    return !!res.rows[0].password;
+}
+
+export async function isUserInLobby(userId: number, lobbyId: number): Promise<boolean> {
+    const query = `
+        select 1 from room_players where userid = $1 and room_id = $2;
+    `;
+
+    let res = await pool.query(query, [userId, lobbyId]);
+
+    if(res.rows.length > 0) return true;
+
+    return false;
 }
