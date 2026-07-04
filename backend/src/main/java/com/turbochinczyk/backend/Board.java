@@ -1,0 +1,55 @@
+package com.turbochinczyk.backend;
+import com.turbochinczyk.backend.Tokens.EmptySpace;
+import com.turbochinczyk.backend.Tokens.Player;
+import com.turbochinczyk.backend.Tokens.Player.Color;
+import com.turbochinczyk.backend.Tokens.Token;
+
+public class Board {
+    //Wszystkie ważne miejsca na planszy są przechowywane w ciągu. Ułatwi to prouszanie po planszy bo player.move(5) przesunie
+    // pionek w tablicy o 5
+    private Token[] boardSpaces;
+
+    private Token[] yellowBase;
+    private Token[] yellowToSpawn;
+    private Token[] redBase;
+    private Token[] redToSpawn;
+    private Token[] blueBase;
+    private Token[] blueToSpawn;
+    private Token[] greenBase;
+    private Token[] greenToSpawn;
+
+
+    public Board(){
+        initalizeBoard();
+    }
+
+    private Token getBoardSquare(int i){
+        return this.boardSpaces[i];
+    }
+
+    private void changeSquare(int i, Token newToken){
+        this.boardSpaces[i] = newToken;
+    }
+
+    private void initalizeBoard(){
+        for(int i=0; i<44;i++){
+            this.boardSpaces[i] = new EmptySpace();
+        }
+        loadPlayers(Color.Blue, blueBase, blueToSpawn);
+        loadPlayers(Color.Yellow, yellowBase, yellowToSpawn);
+        loadPlayers(Color.Green, greenBase, greenToSpawn);
+        loadPlayers(Color.Red, redBase, redToSpawn);
+
+    }
+    private void loadPlayers(Color color, Token[] baseList, Token[] respawnList){
+        for(int i=0; i < 4; i++){
+            respawnList[i] = new Player(color);
+
+            baseList[i] = new EmptySpace();
+        }
+    }
+
+    private void showBoard(){
+        //Print planszy
+    }
+}
