@@ -1,9 +1,12 @@
-import { error, type Actions } from "@sveltejs/kit";
+import { error, type Actions, redirect } from "@sveltejs/kit";
 import { passCheck } from "$lib/server/login";
 import { fail } from "@sveltejs/kit";
 import { createSessionForId, setCookieSession } from "$lib/server/auth";
+import type { PageServerLoad } from "./$types";
 
-
+export const load: PageServerLoad = ({ locals }) => {
+    if(locals.user) throw redirect(303, "/lobby/lobbies");
+}
 
 export const actions: Actions = {
     default: async ({ request, cookies }) => {
@@ -33,8 +36,6 @@ export const actions: Actions = {
 
         setCookieSession(cookies, sessionId);
 
-        return {
-            success: true
-        }
+        throw redirect(303, "/lobby/lobbies");
     }
 }

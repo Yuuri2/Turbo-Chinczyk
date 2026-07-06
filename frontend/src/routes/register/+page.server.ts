@@ -1,6 +1,11 @@
-import { type Actions, error, fail } from "@sveltejs/kit";
+import { type Actions, error, fail, redirect } from "@sveltejs/kit";
 import { createAccount } from "$lib/server/register";
 import { createSessionForId, setCookieSession } from "$lib/server/auth";
+import type { PageServerLoad } from "./$types";
+
+export const load: PageServerLoad = ({ locals }) => {
+    if(locals.user) throw redirect(303, "/lobby/lobbies");
+}
 
 export const actions: Actions = {
     default: async ({ request, cookies }) => {

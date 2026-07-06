@@ -13,7 +13,7 @@
         <button type="submit" id="submit">login</button>
     </div>
 </form>
-{#if form?.success}
+{#if !form?.error}
     <h2><b>zalogowano pomyślnie</b></h2>
 {/if}
 {#if form?.error}

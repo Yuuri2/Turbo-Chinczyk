@@ -1,5 +1,5 @@
 import { pool } from "$lib/server/pool";
-import type { Cookies } from "@sveltejs/kit";
+import { type Cookies, redirect } from "@sveltejs/kit";
 
 const createSessionQuery = `
     insert into tokens (userid, expiry)
@@ -54,4 +54,11 @@ export function setCookieSession(cookies: Cookies, sessionId: string) {
             sameSite: "lax",
             maxAge: maxCookieAge
     });
+}
+
+export function requireUser(locals: App.Locals, redirectURL: string = "/login") {
+    if(!locals.user) {
+        throw redirect(303, redirectURL);
+    }
+    return locals.user;
 }
