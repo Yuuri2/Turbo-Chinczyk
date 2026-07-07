@@ -2,6 +2,7 @@ package com.turbochinczyk.backend;
 
 public class Game {
     private Board board;
+    
     private int turn;
     // 0 - Red, 1 - Blue, 2 - Yellow, 3 - Green
     public Game(){
