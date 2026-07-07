@@ -23,12 +23,31 @@ public class Board {
         initalizeBoard();
     }
 
-    private Token getBoardSquare(int i){
+    public Token getBoardSquare(int i){
         return this.boardSpaces[i];
     }
 
-    private void changeSquare(int i, Token newToken){
+    public void changeSquare(int i, Token newToken){
         this.boardSpaces[i] = newToken;
+    }
+
+    public int getTokenPos(Token token){
+        if (token instanceof Player player){
+            for(int i=0; i < boardSpaces.length;i++){
+                if(player.id == ((Player) boardSpaces[i]).id && player.getColor() == ((Player) boardSpaces[i]).getColor()){
+                    return i;
+                }
+            }
+        }
+        else{
+            for(int i=0; i < boardSpaces.length;i++){
+                if(token == boardSpaces[i]){
+                    return i;
+                }
+            }
+        }
+        
+        return -1;
     }
 
     private void initalizeBoard(){
@@ -43,7 +62,7 @@ public class Board {
     }
     private void loadPlayers(Color color, Token[] baseList, Token[] respawnList){
         for(int i=0; i < 4; i++){
-            respawnList[i] = new Player(color);
+            respawnList[i] = new Player(color, this, i);
 
             baseList[i] = new EmptySpace();
         }
