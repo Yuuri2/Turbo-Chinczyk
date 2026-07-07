@@ -25,7 +25,7 @@ public class Lobby {
         }
     }
 
-    public void handlePlayerDisconnect(String userId) {
+    public void handlePlayerDisconnect(int userId) {
         Player player = players.get(userId);
         if (player != null) {
             player.setOffline();
