@@ -6,7 +6,7 @@
     let { data } = $props();
 
     onMount(() => {
-        connectToLobby(data.LobbyInfo.lobbyId);
+        connectToLobby(data.LobbyInfo.lobbyId, data.session!);
     });
 </script>
 

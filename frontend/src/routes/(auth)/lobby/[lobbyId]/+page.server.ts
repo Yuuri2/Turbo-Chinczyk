@@ -2,7 +2,7 @@ import { requireUser } from "$lib/server/auth";
 import { addUserToLobby, DoesLobbyHavePassword, isPasswordCorrect, isUserInLobby, lobbyInformation, usersInLobby } from "$lib/server/lobby";
 import { fail, redirect, type Actions, type ServerLoad } from "@sveltejs/kit";
 
-export const load: ServerLoad = async ({ params, locals }) => {
+export const load: ServerLoad = async ({ params, locals, cookies }) => {
     const lobbyId = Number(params.lobbyId);
     const user = requireUser(locals);
 
@@ -17,7 +17,8 @@ export const load: ServerLoad = async ({ params, locals }) => {
     const users = await usersInLobby(lobbyId);
 
     return {
-        LobbyInfo: await lobbyInformation(lobbyId)
+        LobbyInfo: await lobbyInformation(lobbyId),
+        session: cookies.get("session")
     }
 }
 
