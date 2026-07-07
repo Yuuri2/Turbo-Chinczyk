@@ -1,9 +1,18 @@
 package com.turbochinczyk.backend;
 
+import com.turbochinczyk.backend.message.LobbyMessage;
+import com.turbochinczyk.backend.message.PlayerJoinedMessage;
+import com.turbochinczyk.backend.message.PlayerReconnectedMessage;
+import com.turbochinczyk.backend.message.PlayerDisconnectedMessage;
+import org.springframework.web.socket.WebSocketSession;
+import tools.jackson.databind.ObjectMapper;
+
 import java.io.IOException;
 import java.util.concurrent.ConcurrentHashMap;
 
 public class Lobby {
+    private static final ObjectMapper MAPPER = new ObjectMapper();
+
     private final String lobbyId;
     private final ConcurrentHashMap<Integer, Player> players = new ConcurrentHashMap<>();
 
@@ -11,17 +20,15 @@ public class Lobby {
         this.lobbyId = lobbyId;
     }
 
-    public void handlePlayerJoin(int userId, String username, org.springframework.web.socket.WebSocketSession session) {
+    public void handlePlayerJoin(int userId, String username, WebSocketSession session) {
         if (players.containsKey(userId)) {
-            // Reconnection scenario
             Player existingPlayer = players.get(userId);
             existingPlayer.updateSession(session);
-            broadcast(existingPlayer.getUsername() + " reconnected!");
+            broadcast(new PlayerReconnectedMessage(userId, existingPlayer.getUsername()));
         } else {
-            // Brand new player joining
             Player newPlayer = new Player(userId, username, session);
             players.put(userId, newPlayer);
-            broadcast(newPlayer.getUsername() + " joined the lobby!");
+            broadcast(new PlayerJoinedMessage(userId, username));
         }
     }
 
@@ -29,19 +36,20 @@ public class Lobby {
         Player player = players.get(userId);
         if (player != null) {
             player.setOffline();
-            broadcast(player.getUsername() + " disconnected. Waiting for reconnection...");
-            
-            // Optional: Start a separate thread/timer to remove them permanently 
-            // from the map after 10-15 seconds if they don't reconnect.
+            broadcast(new PlayerDisconnectedMessage(userId, player.getUsername()));
         }
     }
 
-    public void broadcast(String message) {
+    public void broadcast(LobbyMessage message) {
+        // writeValueAsString w Jackson 3.x rzuca unchecked JacksonException,
+        // więc nie trzeba już try/catch tylko na potrzeby kompilacji
+        String json = MAPPER.writeValueAsString(message);
+
         players.values().forEach(player -> {
             try {
-                player.sendNetworkMessage(message);
+                player.sendNetworkMessage(json);
             } catch (IOException e) {
-                // Connection failed silently, handled during heartbeat or manual disconnect
+                // Zerwane połączenie, obsłużone przy heartbeat/disconnect
             }
         });
     }
