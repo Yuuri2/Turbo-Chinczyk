@@ -1,4 +1,5 @@
 import { writable } from "svelte/store";
+import { type Pluh } from "./message";
 
 export const socket = writable<WebSocket | null>(null);
 
@@ -10,9 +11,7 @@ export function connectToLobby(lobbyId: number, sessionToken: string) {
     ws.onopen = () => console.log("W in the chat");
     ws.onclose = () => console.log("L in the chat");
 
-    ws.onmessage = (event) => {
-        console.log("Wiadomość z serwera gier:", event.data);
-    };
+    ws.onmessage = messagehandler;
 
     socket.set(ws);
 }
@@ -22,4 +21,12 @@ export function disconnect() {
         if (ws) ws.close();
         return null;
     });
+}
+
+function messagehandler(event: MessageEvent) {
+    let json = JSON.parse(event.data) as Pluh;
+
+    console.log("Wiadomość z serwera gier:", json);
+    console.log("aok:", event.type);
+    console.log("username: ", json.username);
 }
