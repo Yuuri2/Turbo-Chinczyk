@@ -51,7 +51,7 @@ public class Board {
     }
 
     private void initalizeBoard(){
-        for(int i=0; i<44;i++){
+        for(int i=0; i<52;i++){
             this.boardSpaces[i] = new EmptySpace();
         }
         loadPlayers(Color.Blue, blueBase, blueToSpawn);

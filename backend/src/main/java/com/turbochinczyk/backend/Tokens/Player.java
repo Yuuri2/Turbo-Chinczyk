@@ -22,6 +22,9 @@ public class Player extends Token{
         int pos = board.getTokenPos(this);
         board.changeSquare(pos, new EmptySpace());
         pos+=i;
+        if(pos >= 52){
+            pos -=52;
+        }
         board.changeSquare(pos, this);
     }
 
