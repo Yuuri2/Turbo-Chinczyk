@@ -1,28 +1,43 @@
 package com.turbochinczyk.backend;
 
 public class Game {
-    private Board board;
-    
-    private int turn;
-    // 0 - Red, 1 - Blue, 2 - Yellow, 3 - Green
-    public Game(){
-        chooseStartPlayer();
-        while (true) {
-            rollDice();
-            nextTurn();
+    private Board board = new Board();
+
+    public enum Turn {
+        Red,
+        Blue,
+        Yellow,
+        Urple,
+        Green;
+
+        private static final Turn[] TURNS = values();
+
+        public Turn next() {
+            return TURNS[(this.ordinal() + 1) % TURNS.length];
+        }
+
+        public static Turn random() {
+            return TURNS[(int)(Math.random() * TURNS.length)];
         }
     }
+    
+    private Turn turn;
+    // proszę nie obraź się na mnie ale zmieniłem to na enum
 
-
-    private void nextTurn(){
-        turn = (turn+1)%4;
+    public Game(){
+        chooseStartPlayer();
     }
 
-    private int rollDice(){
+
+    public void nextTurn(){
+        this.turn = this.turn.next();
+    }
+
+    public static int rollDice(){
         return (int) (Math.random() * 6)+1;
     }
 
     private void chooseStartPlayer(){
-        this.turn = (int) (Math.random() * 4);
+        this.turn = Turn.random();
     }
 }
