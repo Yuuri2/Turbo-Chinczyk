@@ -25,8 +25,8 @@ public class GameWebSocketHandler extends TextWebSocketHandler {
 
     @Override
     public void afterConnectionEstablished(WebSocketSession session) throws Exception {
-        String lobbyId = (String)session.getAttributes().get("LOBBY_ID");
-        UserSessionDto user = (UserSessionDto)session.getAttributes().get("PLAYER");
+        String lobbyId = (String) session.getAttributes().get("LOBBY_ID");
+        UserSessionDto user = (UserSessionDto) session.getAttributes().get("PLAYER");
 
         // Connect user to the requested lobby instance
         Lobby lobby = lobbyManager.getOrCreateLobby(lobbyId);
@@ -37,12 +37,12 @@ public class GameWebSocketHandler extends TextWebSocketHandler {
 
     @Override
     public void afterConnectionClosed(WebSocketSession session, CloseStatus status) throws Exception {
-        String lobbyId = (String) session.getAttributes().get("lobbyId");
-        Integer userId = (Integer) session.getAttributes().get("userId");
+        String lobbyId = (String) session.getAttributes().get("LOBBY_ID");
+        UserSessionDto user = (UserSessionDto) session.getAttributes().get("PLAYER");
 
-        if (lobbyId != null && userId != null) {
+        if (lobbyId != null && user != null) {
             Lobby lobby = lobbyManager.getOrCreateLobby(lobbyId);
-            lobby.handlePlayerDisconnect(userId);
+            lobby.handlePlayerDisconnect(user.getUserId());
         }
     }
 
