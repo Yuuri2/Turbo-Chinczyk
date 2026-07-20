@@ -40,6 +40,10 @@ public class Lobby {
         }
     }
 
+    public void handlePlayerMessage(WebSocketSession session, LobbyMessage message){
+        System.out.printf("W in the chat: %s\n", message.toString());
+    }
+
     public void broadcast(LobbyMessage message) {
         // writeValueAsString w Jackson 3.x rzuca unchecked JacksonException,
         // więc nie trzeba już try/catch tylko na potrzeby kompilacji
