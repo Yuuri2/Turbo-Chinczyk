@@ -4,8 +4,8 @@ import { type Pluh } from "./message";
 export const socket = writable<WebSocket | null>(null);
 
 export function connectToLobby(lobbyId: number, sessionToken: string) {
-    const serverUrl = `ws://localhost:8080/game?lobbyId=${encodeURIComponent(lobbyId)}&token=${encodeURIComponent(sessionToken)}`;
-
+    const proto = location.protocol === "https:" ? "wss" : "ws";
+    const serverUrl = `${proto}://${location.host}/game/${encodeURIComponent(lobbyId)}?token=${encodeURIComponent(sessionToken)}`;
 
     const ws = new WebSocket(serverUrl);
     ws.onopen = () => console.log("W in the chat");

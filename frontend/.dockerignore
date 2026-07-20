@@ -1,0 +1,12 @@
+# Zależności i artefakty lokalne — obraz robi własne `npm ci` i `npm run build`
+node_modules/
+build/
+.svelte-kit/
+
+# Lokalna konfiguracja edytora
+.vscode/
+
+# Niepotrzebne w obrazie
+.gitignore
+deno.lock
+README.md

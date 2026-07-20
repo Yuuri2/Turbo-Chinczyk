@@ -1,0 +1,6 @@
+# Artefakty lokalnego builda — obraz kompiluje od zera w etapie build
+target/
+
+# Niepotrzebne w obrazie
+.gitignore
+.gitattributes
