@@ -12,6 +12,10 @@ public class LobbyManager {
         return activeLobbies.computeIfAbsent(lobbyId, id -> new Lobby(id));
     }
     
+    public Lobby get(String lobbyId) {
+        return activeLobbies.get(lobbyId);
+    }
+
     public void deleteLobby(String lobbyId) {
         activeLobbies.remove(lobbyId);
     }

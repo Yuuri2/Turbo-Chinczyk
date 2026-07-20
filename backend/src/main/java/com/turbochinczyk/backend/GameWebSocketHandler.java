@@ -14,7 +14,7 @@ import java.util.Optional;
 
 @Component
 public class GameWebSocketHandler extends TextWebSocketHandler {
-
+    
     private final LobbyManager lobbyManager;
     private final AuthService authService;
 
@@ -25,32 +25,8 @@ public class GameWebSocketHandler extends TextWebSocketHandler {
 
     @Override
     public void afterConnectionEstablished(WebSocketSession session) throws Exception {
-        URI uri = session.getUri();
-        Map<String, String> params = queryToMap(uri.getQuery());
-
-        String lobbyId = params.get("lobbyId");
-        String token = params.get("token");
-
-        if (lobbyId == null || token == null) {
-            session.close(CloseStatus.BAD_DATA);
-            return;
-        }
-
-        // Validate token against Postgres via JDBC
-        Optional<UserSessionDto> authResult = authService.validateToken(token);
-
-        if (authResult.isEmpty()) {
-            // Token is invalid, reject connection safely
-            session.close(CloseStatus.POLICY_VIOLATION);
-            System.out.println("Rejected unauthorized WebSocket connection attempt.");
-            return;
-        }
-
-        UserSessionDto user = authResult.get();
-        
-        // Save database identifiers in session attributes for disconnection tracking
-        session.getAttributes().put("lobbyId", lobbyId);
-        session.getAttributes().put("userId", user.getUserId());
+        String lobbyId = (String)session.getAttributes().get("LOBBY_ID");
+        UserSessionDto user = (UserSessionDto)session.getAttributes().get("PLAYER");
 
         // Connect user to the requested lobby instance
         Lobby lobby = lobbyManager.getOrCreateLobby(lobbyId);
