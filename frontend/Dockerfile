@@ -14,7 +14,7 @@ WORKDIR /app
 ENV NODE_ENV=production
 
 # W runtime potrzebne tylko zaleznosci produkcyjne (w praktyce: pg)
-COPY package.json package-lock.json .
+COPY package.json package-lock.json
 RUN npm ci --omit=dev
 
 COPY --from=build /app/build ./build
