@@ -1,13 +1,12 @@
 package com.turbochinczyk.backend;
 
 public class Game {
-    private Board board = new Board();
+    // private Board board = new Board();
 
     public enum Turn {
         Red,
         Blue,
         Yellow,
-        Urple,
         Green;
 
         private static final Turn[] TURNS = values();
@@ -19,15 +18,10 @@ public class Game {
         public static Turn random() {
             return TURNS[(int)(Math.random() * TURNS.length)];
         }
+
     }
     
     private Turn turn;
-    // proszę nie obraź się na mnie ale zmieniłem to na enum
-
-    public Game(){
-        chooseStartPlayer();
-    }
-
 
     public void nextTurn(){
         this.turn = this.turn.next();
@@ -39,5 +33,17 @@ public class Game {
 
     private void chooseStartPlayer(){
         this.turn = Turn.random();
+    }
+
+    public Game(){
+        chooseStartPlayer();
+    }
+
+    public static void main(String[] args){
+        Game game = new Game();
+        game.chooseStartPlayer();
+        System.out.println(game.turn);
+        game.nextTurn();
+        System.out.println(game.turn);
     }
 }

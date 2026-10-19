@@ -14,18 +14,18 @@ public class Player extends Token{
     }
     //teleportacja gracza jak przy spawnie
     public void go(int i){
-        board.changeSquare(board.getTokenPos(this), new EmptySpace());
-        board.changeSquare(i, this);
+        board.changeBoardToken(board.getTokenPos(this), new EmptySpace());
+        board.changeBoardToken(i, this);
     }
     //prosty ruch do przodu używany przy ruchu gracza
     public void move(int i){
         int pos = board.getTokenPos(this);
-        board.changeSquare(pos, new EmptySpace());
+        board.changeBoardToken(pos, new EmptySpace());
         pos+=i;
         if(pos >= 52){
             pos -=52;
         }
-        board.changeSquare(pos, this);
+        board.changeBoardToken(pos, this);
     }
 
     public Color getColor(){
