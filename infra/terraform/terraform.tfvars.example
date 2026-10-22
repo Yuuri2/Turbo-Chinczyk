@@ -1,0 +1,7 @@
+subscription_id = "SUBSCRIPTION-ID"
+
+ssh_public_keys = {
+  account1    = "ssh-ed25519 AAAA... acc1"
+  account2 = "ssh-ed25519 AAAA... acc2"
+  account3 = "ssh-ed25519 AAAA... acc3"
+}
