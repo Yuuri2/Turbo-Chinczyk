@@ -1,0 +1,41 @@
+#cloud-config
+package_update: true
+package_upgrade: true
+
+packages:
+  - docker.io
+  - docker-compose-v2
+  - git
+  - fail2ban
+  - python3-systemd
+
+groups:
+  - docker
+
+write_files:
+  # Hardening SSH - plik z niskim numerem, bo sshd bierze pierwszą znalezioną wartość
+  - path: /etc/ssh/sshd_config.d/10-hardening.conf
+    permissions: "0644"
+    content: |
+      PermitRootLogin no
+      MaxAuthTries 5
+
+  # Banowanie IP po nieudanych próbach logowania
+  - path: /etc/fail2ban/jail.local
+    permissions: "0644"
+    content: |
+      [sshd]
+      enabled  = true
+      backend  = systemd
+      # Ubuntu 24.04: usługa nazywa się ssh.service, nie sshd.service
+      journalmatch = _SYSTEMD_UNIT=ssh.service + _COMM=sshd
+      maxretry = 5
+      findtime = 10m
+      bantime  = 1h
+
+runcmd:
+  - systemctl enable --now docker
+  - usermod -aG docker ${admin_username}
+  - sshd -t && systemctl restart ssh
+  - systemctl enable fail2ban
+  - systemctl restart fail2ban

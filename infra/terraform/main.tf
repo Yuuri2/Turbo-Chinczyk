@@ -1,10 +1,18 @@
 provider "azurerm" {
   features {}
   subscription_id = var.subscription_id
+
+  # Rejestrujemy tylko potrzebnych providerów zamiast kilkudziesięciu (spowalniało plan)
+  resource_provider_registrations = "none"
+  resource_providers_to_register = [
+    "Microsoft.Compute",
+    "Microsoft.Network",
+    "Microsoft.DevTestLab",
+  ]
 }
 
 locals {
-  prefix = "${var.project}"
+  prefix = var.project
 }
 
 resource "azurerm_resource_group" "rg" {
@@ -34,7 +42,6 @@ resource "azurerm_public_ip" "pip" {
   sku                 = "Standard"
 }
 
-#TODO
 resource "azurerm_network_security_group" "nsg" {
   name                = "nsg-${local.prefix}"
   location            = azurerm_resource_group.rg.location
@@ -48,6 +55,7 @@ resource "azurerm_network_security_group" "nsg" {
     protocol                   = "Tcp"
     source_port_range          = "*"
     destination_port_range     = "22"
+    source_address_prefix      = "*"
     destination_address_prefix = "*"
   }
 
@@ -64,7 +72,6 @@ resource "azurerm_network_security_group" "nsg" {
   }
 }
 
-#TODO
 resource "azurerm_network_interface" "nic" {
   name                = "nic-${local.prefix}"
   location            = azurerm_resource_group.rg.location
@@ -78,43 +85,62 @@ resource "azurerm_network_interface" "nic" {
   }
 }
 
-#TODO
 resource "azurerm_network_interface_security_group_association" "nsg_assoc" {
   network_interface_id      = azurerm_network_interface.nic.id
   network_security_group_id = azurerm_network_security_group.nsg.id
 }
 
-#TODO
 resource "azurerm_linux_virtual_machine" "vm" {
   name                = "vm-${local.prefix}"
   resource_group_name = azurerm_resource_group.rg.name
   location            = azurerm_resource_group.rg.location
   size                = var.vm_size
-  admin_username      = "azureuser"
+  admin_username      = var.admin_username
 
   network_interface_ids           = [azurerm_network_interface.nic.id]
   disable_password_authentication = true
 
-#TODO
+  # Instalacja Dockera przy pierwszym starcie
+  custom_data = base64encode(templatefile("${path.module}/cloud-init.yaml", {
+    admin_username = var.admin_username
+  }))
+
+  # Zmiana cloud-init wymusza odtworzenie VM - ignorujemy, poprawki robimy ręcznie na VM
+  lifecycle {
+    ignore_changes = [custom_data]
+  }
+
   dynamic "admin_ssh_key" {
     for_each = var.ssh_public_keys
     content {
-      username   = "azureuser"
+      username   = var.admin_username
       public_key = admin_ssh_key.value
     }
   }
 
-#TODO
   os_disk {
     caching              = "ReadWrite"
     storage_account_type = "Standard_LRS"
   }
 
-#TODO
   source_image_reference {
     publisher = "Canonical"
     offer     = "ubuntu-24_04-lts"
     sku       = "server"
     version   = "latest"
+  }
+}
+
+# Automatyczne wyłączanie VM codziennie (oszczędność kosztów)
+resource "azurerm_dev_test_global_vm_shutdown_schedule" "shutdown_schedule" {
+  virtual_machine_id = azurerm_linux_virtual_machine.vm.id
+  location           = azurerm_resource_group.rg.location
+  enabled            = true
+
+  daily_recurrence_time = var.shutdown_time
+  timezone              = var.shutdown_timezone
+
+  notification_settings {
+    enabled = false
   }
 }
