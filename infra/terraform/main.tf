@@ -105,9 +105,10 @@ resource "azurerm_linux_virtual_machine" "vm" {
     admin_username = var.admin_username
   }))
 
-  # Zmiana cloud-init wymusza odtworzenie VM - ignorujemy, poprawki robimy ręcznie na VM
+  # Zmiana cloud-init lub kluczy SSH wymusza odtworzenie VM - ignorujemy,
+  # poprawki i nowe klucze dodajemy ręcznie (patrz infra/README.md)
   lifecycle {
-    ignore_changes = [custom_data]
+    ignore_changes = [custom_data, admin_ssh_key]
   }
 
   dynamic "admin_ssh_key" {
