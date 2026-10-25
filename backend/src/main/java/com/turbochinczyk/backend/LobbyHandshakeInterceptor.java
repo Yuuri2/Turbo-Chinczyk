@@ -1,6 +1,5 @@
 package com.turbochinczyk.backend;
 
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.server.ServerHttpRequest;
 import org.springframework.http.server.ServerHttpResponse;
@@ -9,31 +8,44 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.socket.WebSocketHandler;
 import org.springframework.web.socket.server.support.HttpSessionHandshakeInterceptor;
 import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.Cookie;
 import java.util.Map;
 import com.turbochinczyk.backend.database.AuthService;
 
 
 @Component
 public class LobbyHandshakeInterceptor extends HttpSessionHandshakeInterceptor {
-    
-    @Autowired
-    private AuthService authService;
+
+    private final AuthService authService;
+    private final LobbyManager lobbyManager;
+
+    public LobbyHandshakeInterceptor(
+            AuthService authService,
+            LobbyManager lobbyManager) {
+        this.authService = authService;
+        this.lobbyManager = lobbyManager;
+    }
 
     @Override
     public boolean beforeHandshake(ServerHttpRequest request, ServerHttpResponse response, WebSocketHandler wsHandler, Map<String, Object> attributes) throws Exception {
         String path = request.getURI().getPath();
         String[] pathSegments = path.split("/");
-        if(pathSegments.length <= 2) {
+        if (pathSegments.length != 3 || pathSegments[1].isBlank() || pathSegments[2].isBlank()) {
             response.setStatusCode(HttpStatus.BAD_REQUEST);
             return false;
         }
         String lobbyId = pathSegments[pathSegments.length - 1];
 
-        // TODO: zmienić to na sprawdzanie ciasteczek zamiast tokena w linku jak ngnix będzie działać
-        HttpServletRequest servletRequest = ((ServletServerHttpRequest) request).getServletRequest();
-        String token = servletRequest.getParameter("token");
+        Lobby lobby = lobbyManager.get(lobbyId);
+        if (lobby == null) {
+            response.setStatusCode(HttpStatus.NOT_FOUND);
+            return false;
+        }
 
-        if(token == null || token.isBlank()) {
+        HttpServletRequest servletRequest =
+                ((ServletServerHttpRequest) request).getServletRequest();
+        String token = findSessionCookie(servletRequest);
+        if (token == null) {
             response.setStatusCode(HttpStatus.UNAUTHORIZED);
             return false;
         }
@@ -44,9 +56,7 @@ public class LobbyHandshakeInterceptor extends HttpSessionHandshakeInterceptor {
             return false;
         }
 
-        // TODO: sprawdzić czy user id jest w lobby id puzniej jak zrobi się zapytanie do bazy
-        boolean isAllowed = true;
-        if(!isAllowed) {
+        if (!lobby.hasMember(user.get().getUserId())) {
             response.setStatusCode(HttpStatus.FORBIDDEN);
             return false;
         }
@@ -55,6 +65,23 @@ public class LobbyHandshakeInterceptor extends HttpSessionHandshakeInterceptor {
         attributes.put("USER", user.get());
 
         return super.beforeHandshake(request, response, wsHandler, attributes);
+    }
+
+    private String findSessionCookie(HttpServletRequest request) {
+        Cookie[] cookies = request.getCookies();
+        if (cookies == null) {
+            return null;
+        }
+
+        for (Cookie cookie : cookies) {
+            if ("session".equals(cookie.getName())
+                    && cookie.getValue() != null
+                    && !cookie.getValue().isBlank()) {
+                return cookie.getValue();
+            }
+        }
+
+        return null;
     }
     
 }

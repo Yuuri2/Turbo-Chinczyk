@@ -11,7 +11,10 @@ import com.fasterxml.jackson.annotation.JsonSubTypes;
 @JsonSubTypes({
     @JsonSubTypes.Type(value = PlayerJoinedMessage.class, name = "PLAYER_JOINED"),
     @JsonSubTypes.Type(value = PlayerReconnectedMessage.class, name = "PLAYER_RECONNECTED"),
-    @JsonSubTypes.Type(value = PlayerDisconnectedMessage.class, name = "PLAYER_DISCONNECTED")
+    @JsonSubTypes.Type(value = PlayerDisconnectedMessage.class, name = "PLAYER_DISCONNECTED"),
+    @JsonSubTypes.Type(value = PlayerLeftMessage.class, name = "PLAYER_LEFT"),
+    @JsonSubTypes.Type(value = LobbySnapshotMessage.class, name = "LOBBY_SNAPSHOT"),
+    @JsonSubTypes.Type(value = PlayerReadyMessage.class, name = "PLAYER_READY")
 })
 public interface LobbyMessage {
 }

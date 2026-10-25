@@ -1,6 +1,6 @@
-package com.turbochinczyk.backend;
+package com.turbochinczyk.backend.websocket;
 
-import org.springframework.beans.factory.annotation.Autowired;
+import com.turbochinczyk.backend.LobbyHandshakeInterceptor;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.web.socket.config.annotation.EnableWebSocket;
 import org.springframework.web.socket.config.annotation.WebSocketConfigurer;
@@ -10,21 +10,20 @@ import org.springframework.web.socket.config.annotation.WebSocketHandlerRegistry
 @EnableWebSocket
 public class WebSocketConfig implements WebSocketConfigurer {
 
-    @Autowired
     private final GameWebSocketHandler gameWebSocketHandler;
+    private final LobbyHandshakeInterceptor lobbyHandshakeInterceptor;
 
-    @Autowired
-    private LobbyHandshakeInterceptor lobbyInterceptor;
-
-    // Spring automatically provides the fully constructed handler here
-    public WebSocketConfig(GameWebSocketHandler gameWebSocketHandler) {
+    public WebSocketConfig(
+            GameWebSocketHandler gameWebSocketHandler,
+            LobbyHandshakeInterceptor lobbyHandshakeInterceptor) {
         this.gameWebSocketHandler = gameWebSocketHandler;
+        this.lobbyHandshakeInterceptor = lobbyHandshakeInterceptor;
     }
 
     @Override
     public void registerWebSocketHandlers(WebSocketHandlerRegistry registry) {
-        registry.addHandler(gameWebSocketHandler, "/game/*")
-        .addInterceptors(lobbyInterceptor)
-        .setAllowedOrigins("*");
+        registry.addHandler(gameWebSocketHandler, "/game/{lobbyId}")
+                .addInterceptors(lobbyHandshakeInterceptor)
+                .setAllowedOriginPatterns("*");
     }
 }

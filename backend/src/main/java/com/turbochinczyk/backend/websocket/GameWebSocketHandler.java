@@ -1,6 +1,8 @@
-package com.turbochinczyk.backend;
+package com.turbochinczyk.backend.websocket;
 
-import com.turbochinczyk.backend.database.*;
+import com.turbochinczyk.backend.Lobby;
+import com.turbochinczyk.backend.LobbyManager;
+import com.turbochinczyk.backend.database.UserSessionDto;
 import com.turbochinczyk.backend.message.LobbyMessage;
 import tools.jackson.databind.ObjectMapper;
 
@@ -9,6 +11,8 @@ import org.springframework.web.socket.CloseStatus;
 import org.springframework.web.socket.TextMessage;
 import org.springframework.web.socket.WebSocketSession;
 import org.springframework.web.socket.handler.TextWebSocketHandler;
+
+
 
 @Component
 public class GameWebSocketHandler extends TextWebSocketHandler {
@@ -26,9 +30,24 @@ public class GameWebSocketHandler extends TextWebSocketHandler {
         String lobbyId = (String) session.getAttributes().get("LOBBY_ID");
         UserSessionDto user = (UserSessionDto) session.getAttributes().get("USER");
 
-        // Connect user to the requested lobby instance
-        Lobby lobby = lobbyManager.getOrCreateLobby(lobbyId);
-        lobby.handlePlayerJoin(user.getUserId(), user.getUsername(), session);
+        if (lobbyId == null || user == null) {
+            session.close(CloseStatus.POLICY_VIOLATION);
+            return;
+        }
+
+        Lobby lobby = lobbyManager.get(lobbyId);
+        if (lobby == null) {
+            session.close(CloseStatus.POLICY_VIOLATION);
+            return;
+        }
+
+        try {
+            lobby.handlePlayerJoin(user.getUserId(), user.getUsername(), session);
+        } catch (IllegalStateException exception) {
+            session.close(CloseStatus.POLICY_VIOLATION);
+            return;
+        }
+        lobby.sendSnapshot(session);
 
         System.out.println("Verified User: " + user.getUsername() + " (ID: " + user.getUserId() + ") entered Lobby: " + lobbyId);
     }
@@ -56,8 +75,10 @@ public class GameWebSocketHandler extends TextWebSocketHandler {
         UserSessionDto user = (UserSessionDto) session.getAttributes().get("USER");
 
         if (lobbyId != null && user != null) {
-            Lobby lobby = lobbyManager.getOrCreateLobby(lobbyId);
-            lobby.handlePlayerDisconnect(user.getUserId());
+            Lobby lobby = lobbyManager.get(lobbyId);
+            if (lobby != null) {
+                lobby.handlePlayerDisconnect(user.getUserId(), session.getId());
+            }
         }
     }
 }
