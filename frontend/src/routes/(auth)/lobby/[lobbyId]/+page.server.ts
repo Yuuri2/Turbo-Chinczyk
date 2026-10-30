@@ -1,5 +1,11 @@
 import { requireUser } from "$lib/server/auth";
-import { getLobby, joinLobby, LobbyApiError } from "$lib/server/lobby";
+import {
+    deleteLobby,
+    getLobby,
+    joinLobby,
+    leaveLobby,
+    LobbyApiError
+} from "$lib/server/lobby";
 import { fail, redirect, type Actions, type ServerLoad } from "@sveltejs/kit";
 
 export const load: ServerLoad = async ({ params, locals, cookies, fetch }) => {
@@ -75,5 +81,47 @@ export const actions: Actions = {
         }
         
         throw redirect(303, `/lobby/${lobbyId}`);
+    },
+    leave: async ({ params, locals, cookies, fetch }) => {
+        requireUser(locals);
+        const lobbyId = Number(params.lobbyId);
+        if (Number.isNaN(lobbyId) || lobbyId <= 0) {
+            throw redirect(303, "/lobby/lobbies");
+        }
+
+        try {
+            await leaveLobby(fetch, cookies.get("session"), lobbyId);
+        } catch (error) {
+            if (error instanceof LobbyApiError && error.status === 404) {
+                throw redirect(303, "/lobby/lobbies");
+            }
+            throw error;
+        }
+
+        throw redirect(303, "/lobby/lobbies");
+    },
+    delete: async ({ params, locals, cookies, fetch }) => {
+        requireUser(locals);
+        const lobbyId = Number(params.lobbyId);
+        if (Number.isNaN(lobbyId) || lobbyId <= 0) {
+            throw redirect(303, "/lobby/lobbies");
+        }
+
+        try {
+            await deleteLobby(fetch, cookies.get("session"), lobbyId);
+        } catch (error) {
+            if (error instanceof LobbyApiError && error.status === 404) {
+                throw redirect(303, "/lobby/lobbies");
+            }
+            if (error instanceof LobbyApiError && error.status === 403) {
+                return fail(403, {
+                    success: false,
+                    message: "only the host can delete this lobby"
+                });
+            }
+            throw error;
+        }
+
+        throw redirect(303, "/lobby/lobbies");
     }
 }

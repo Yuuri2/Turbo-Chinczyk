@@ -1,11 +1,13 @@
 <script lang="ts">
-    import { onMount } from "svelte";
+    import { onDestroy, onMount } from "svelte";
+    import { enhance } from "$app/forms";
     import {
         connectToLobby,
         lobby,
         lastCommandError,
         setReady,
-        startGame
+        startGame,
+        disconnect
     } from "$lib/game/websocket";
 
     let { data } = $props();
@@ -13,6 +15,8 @@
     onMount(() => {
         connectToLobby(data.LobbyInfo.lobbyId);
     });
+
+    onDestroy(disconnect);
 
     function currentPlayer() {
             return $lobby?.players.find((player) => player.userId === data.user.id);
@@ -38,4 +42,12 @@
 {/if}
 {#if data.LobbyInfo.hostId === data.user.id}
     <button onclick={() => startGame()}>start game</button>
+{/if}
+<form action="?/leave" method="POST" use:enhance>
+    <button type="submit">leave lobby</button>
+</form>
+{#if data.LobbyInfo.hostId === data.user.id}
+    <form action="?/delete" method="POST" use:enhance>
+        <button type="submit">delete lobby</button>
+    </form>
 {/if}

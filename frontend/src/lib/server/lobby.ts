@@ -109,6 +109,32 @@ export function joinLobby(
     );
 }
 
+export function leaveLobby(
+    fetchFunction: typeof fetch,
+    session: string | undefined,
+    lobbyId: number
+): Promise<void> {
+    return backendRequest<void>(
+        fetchFunction,
+        `/api/lobbies/${lobbyId}/leave`,
+        session,
+        { method: "POST" }
+    );
+}
+
+export function deleteLobby(
+    fetchFunction: typeof fetch,
+    session: string | undefined,
+    lobbyId: number
+): Promise<void> {
+    return backendRequest<void>(
+        fetchFunction,
+        `/api/lobbies/${lobbyId}`,
+        session,
+        { method: "DELETE" }
+    );
+}
+
 export class LobbyApiError extends Error {
     constructor(
         public readonly status: number,
