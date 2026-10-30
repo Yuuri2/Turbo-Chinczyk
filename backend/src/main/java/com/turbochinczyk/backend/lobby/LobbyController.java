@@ -100,7 +100,19 @@ public class LobbyController {
             HttpServletRequest httpRequest) {
         UserSessionDto user = requireUser(httpRequest);
         try {
+            Lobby lobby = lobbyService.getLobby(lobbyId);
             lobbyService.leaveLobby(lobbyId, user.getUserId());
+            if (lobby.getPlayerCount() == 0) {
+                connectionManager.closeLobby(
+                        lobbyId,
+                        new CloseStatus(4004, "Lobby is empty"));
+            } else {
+                connectionManager.broadcast(
+                        lobbyId,
+                        new com.turbochinczyk.backend.message.LobbySnapshotMessage(
+                                lobby.snapshot(
+                                        connectionManager.connectedUserIds(lobbyId))));
+            }
         } catch (LobbyService.LobbyNotFoundException exception) {
             throw new ResponseStatusException(
                     HttpStatus.NOT_FOUND,

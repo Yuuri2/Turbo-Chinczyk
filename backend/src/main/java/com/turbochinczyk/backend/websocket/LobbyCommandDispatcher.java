@@ -50,7 +50,7 @@ public class LobbyCommandDispatcher {
                         userId,
                         command.requestId(),
                         "SET_READY",
-                        "LOBBY_RULE_VIOLATION",
+                        CommandErrorCodes.LOBBY_RULE_VIOLATION,
                         exception.getMessage());
             }
             return;
@@ -71,7 +71,7 @@ public class LobbyCommandDispatcher {
                         userId,
                         command.requestId(),
                         "START_GAME",
-                        "LOBBY_RULE_VIOLATION",
+                        CommandErrorCodes.LOBBY_RULE_VIOLATION,
                         exception.getMessage());
             }
             return;

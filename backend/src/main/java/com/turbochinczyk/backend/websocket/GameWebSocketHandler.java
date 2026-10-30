@@ -70,12 +70,12 @@ public class GameWebSocketHandler extends TextWebSocketHandler {
         } catch (tools.jackson.core.JacksonException exception) {
             LOGGER.warn("Received malformed lobby WebSocket message on session {}",
                     session.getId());
-            reject(session, lobbyId, null, "MALFORMED_MESSAGE",
+            reject(session, lobbyId, null, CommandErrorCodes.MALFORMED_MESSAGE,
                     "Message is not a valid lobby command");
         } catch (IllegalArgumentException exception) {
             LOGGER.warn("Received unsupported lobby WebSocket command on session {}",
                     session.getId());
-            reject(session, lobbyId, null, "UNSUPPORTED_COMMAND",
+            reject(session, lobbyId, null, CommandErrorCodes.UNSUPPORTED_COMMAND,
                     "Message is not a supported lobby command");
         }
     }
