@@ -3,6 +3,7 @@ package com.turbochinczyk.backend.lobby;
 import com.turbochinczyk.backend.Lobby;
 import com.turbochinczyk.backend.database.AuthService;
 import com.turbochinczyk.backend.database.UserSessionDto;
+import com.turbochinczyk.backend.websocket.LobbyConnectionManager;
 import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.http.HttpStatus;
@@ -15,6 +16,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.server.ResponseStatusException;
+import org.springframework.web.socket.CloseStatus;
 
 import java.util.List;
 
@@ -23,10 +25,15 @@ import java.util.List;
 public class LobbyController {
     private final LobbyService lobbyService;
     private final AuthService authService;
+    private final LobbyConnectionManager connectionManager;
 
-    public LobbyController(LobbyService lobbyService, AuthService authService) {
+    public LobbyController(
+            LobbyService lobbyService,
+            AuthService authService,
+            LobbyConnectionManager connectionManager) {
         this.lobbyService = lobbyService;
         this.authService = authService;
+        this.connectionManager = connectionManager;
     }
 
     @GetMapping
@@ -112,6 +119,9 @@ public class LobbyController {
         UserSessionDto user = requireUser(httpRequest);
         try {
             lobbyService.deleteLobby(lobbyId, user.getUserId());
+            connectionManager.closeLobby(
+                    lobbyId,
+                    new CloseStatus(4004, "Lobby was deleted"));
         } catch (LobbyService.LobbyNotFoundException exception) {
             throw new ResponseStatusException(
                     HttpStatus.NOT_FOUND,

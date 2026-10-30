@@ -82,6 +82,17 @@ public class LobbyCommandDispatcher {
                         + message.getClass().getSimpleName());
     }
 
+    public int getUserId(int lobbyId, String sessionId) {
+        return connectionManager.getUserId(lobbyId, sessionId);
+    }
+
+    public void sendRejection(
+            int lobbyId,
+            int userId,
+            CommandRejectedMessage rejection) throws java.io.IOException {
+        connectionManager.sendTo(lobbyId, userId, rejection);
+    }
+
     private void acknowledge(
             int lobbyId,
             int userId,

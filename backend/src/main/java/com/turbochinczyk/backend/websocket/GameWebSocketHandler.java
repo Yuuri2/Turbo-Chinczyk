@@ -3,6 +3,9 @@ package com.turbochinczyk.backend.websocket;
 import com.turbochinczyk.backend.database.UserSessionDto;
 import com.turbochinczyk.backend.lobby.LobbyService;
 import com.turbochinczyk.backend.message.LobbyMessage;
+import com.turbochinczyk.backend.message.CommandRejectedMessage;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import tools.jackson.databind.ObjectMapper;
 
 import org.springframework.stereotype.Component;
@@ -15,6 +18,8 @@ import org.springframework.web.socket.handler.TextWebSocketHandler;
 
 @Component
 public class GameWebSocketHandler extends TextWebSocketHandler {
+    private static final Logger LOGGER =
+            LoggerFactory.getLogger(GameWebSocketHandler.class);
     
     private final LobbyWebSocketService webSocketService;
     private final LobbyCommandDispatcher commandDispatcher;
@@ -55,16 +60,23 @@ public class GameWebSocketHandler extends TextWebSocketHandler {
         }
 
         try {
-                String payload = message.getPayload();
+            String payload = message.getPayload();
             LobbyMessage lobbyMessage = objectMapper.readValue(payload, LobbyMessage.class);
 
             commandDispatcher.dispatch(
                     lobbyId,
                     session.getId(),
                     lobbyMessage);
-        } catch (Exception exception) {
-            System.err.println("Could not process lobby WebSocket message: "
-                    + exception.getMessage());
+        } catch (tools.jackson.core.JacksonException exception) {
+            LOGGER.warn("Received malformed lobby WebSocket message on session {}",
+                    session.getId());
+            reject(session, lobbyId, null, "MALFORMED_MESSAGE",
+                    "Message is not a valid lobby command");
+        } catch (IllegalArgumentException exception) {
+            LOGGER.warn("Received unsupported lobby WebSocket command on session {}",
+                    session.getId());
+            reject(session, lobbyId, null, "UNSUPPORTED_COMMAND",
+                    "Message is not a supported lobby command");
         }
     }
 
@@ -75,6 +87,21 @@ public class GameWebSocketHandler extends TextWebSocketHandler {
 
         if (lobbyId != null && user != null) {
             webSocketService.disconnect(lobbyId, user, session.getId());
+        }
+    }
+
+    private void reject(
+            WebSocketSession session,
+            int lobbyId,
+            String requestId,
+            String code,
+            String message) throws java.io.IOException {
+        int userId = commandDispatcher.getUserId(lobbyId, session.getId());
+        if (userId >= 0) {
+            commandDispatcher.sendRejection(
+                    lobbyId,
+                    userId,
+                    new CommandRejectedMessage(requestId, "UNKNOWN", code, message));
         }
     }
 }

@@ -6,6 +6,7 @@ import com.turbochinczyk.backend.message.LobbySnapshotMessage;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
+import org.springframework.web.socket.CloseStatus;
 import org.springframework.web.socket.TextMessage;
 import org.springframework.web.socket.WebSocketSession;
 import tools.jackson.databind.ObjectMapper;
@@ -88,6 +89,25 @@ public class LobbyConnectionManager {
         return lobbyConnections == null
                 ? Set.of()
                 : Set.copyOf(lobbyConnections.keySet());
+    }
+
+    public void closeLobby(int lobbyId, CloseStatus status) {
+        Map<Integer, WebSocketSession> lobbyConnections =
+                connections.remove(lobbyId);
+        if (lobbyConnections == null) {
+            return;
+        }
+
+        lobbyConnections.values().forEach(session -> {
+            try {
+                if (session.isOpen()) {
+                    session.close(status);
+                }
+            } catch (IOException exception) {
+                LOGGER.warn("Could not close deleted lobby WebSocket session {}",
+                        session.getId(), exception);
+            }
+        });
     }
 
     public void sendSnapshot(Lobby lobby, WebSocketSession session) throws IOException {
