@@ -1,10 +1,10 @@
 import { type ServerLoad, type Actions, fail, redirect, isRedirect } from "@sveltejs/kit";
-import { createLobby, currentWaitingLobbies } from "$lib/server/lobby";
+import { createLobby, listLobbies } from "$lib/server/lobby";
 import { requireUser } from "$lib/server/auth";
 
 
 export const actions: Actions = {
-    createLobby: async ({ request, locals }) => {
+    createLobby: async ({ request, locals, cookies, fetch }) => {
         const formData = await request.formData();
         const name = formData.get("name")?.toString().trim() || null;
         const password = formData.get("password")?.toString().trim() || null;
@@ -18,9 +18,13 @@ export const actions: Actions = {
         }
 
         try {
-            const lobbyId = await createLobby(name, user.id, password);
+            const lobby = await createLobby(
+                fetch,
+                cookies.get("session"),
+                name,
+                password);
             
-            throw redirect(303, `/lobby/${lobbyId}`);
+            throw redirect(303, `/lobby/${lobby.lobbyId}`);
         } catch(err) {
             if(isRedirect(err)){
                 throw err;
@@ -35,8 +39,8 @@ export const actions: Actions = {
     }
 }
 
-export const load: ServerLoad = async ({}) => {
+export const load: ServerLoad = async ({ fetch, cookies }) => {
     return{
-        lobbies: await currentWaitingLobbies()
+        lobbies: await listLobbies(fetch, cookies.get("session"))
     }
 }

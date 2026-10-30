@@ -23,10 +23,10 @@
     {#each data.lobbies as lobby}
         <div class="lobby">
             {lobby.name} 
-            {lobby.id}
-            <form action="/lobby/{lobby.id}?/join" method="POST" use:enhance>
+            {lobby.lobbyId}
+            <form action="/lobby/{lobby.lobbyId}?/join" method="POST" use:enhance>
                 <button type="submit">join</button>
-                {#if lobby.is_private}
+                {#if lobby.passwordProtected}
                     <input type="text" name="password">
                 {/if}
             </form>
