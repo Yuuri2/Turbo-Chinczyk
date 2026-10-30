@@ -1,9 +1,11 @@
 package com.turbochinczyk.backend.websocket;
 
 import com.turbochinczyk.backend.Lobby;
-import com.turbochinczyk.backend.LobbyManager;
 import com.turbochinczyk.backend.database.UserSessionDto;
+import com.turbochinczyk.backend.lobby.LobbyService;
 import com.turbochinczyk.backend.message.LobbyMessage;
+import com.turbochinczyk.backend.message.PlayerDisconnectedMessage;
+import com.turbochinczyk.backend.message.PlayerReconnectedMessage;
 import tools.jackson.databind.ObjectMapper;
 
 import org.springframework.stereotype.Component;
@@ -17,17 +19,25 @@ import org.springframework.web.socket.handler.TextWebSocketHandler;
 @Component
 public class GameWebSocketHandler extends TextWebSocketHandler {
     
-    private final LobbyManager lobbyManager;
+    private final LobbyService lobbyService;
+    private final LobbyConnectionManager connectionManager;
+    private final LobbyCommandDispatcher commandDispatcher;
     private final ObjectMapper objectMapper;
 
-    public GameWebSocketHandler(LobbyManager lobbyManager, ObjectMapper objectMapper) {
-        this.lobbyManager = lobbyManager;
+    public GameWebSocketHandler(
+            LobbyService lobbyService,
+            LobbyConnectionManager connectionManager,
+            LobbyCommandDispatcher commandDispatcher,
+            ObjectMapper objectMapper) {
+        this.lobbyService = lobbyService;
+        this.connectionManager = connectionManager;
+        this.commandDispatcher = commandDispatcher;
         this.objectMapper = objectMapper;
     }
 
     @Override
     public void afterConnectionEstablished(WebSocketSession session) throws Exception {
-        String lobbyId = (String) session.getAttributes().get("LOBBY_ID");
+        Integer lobbyId = (Integer) session.getAttributes().get("LOBBY_ID");
         UserSessionDto user = (UserSessionDto) session.getAttributes().get("USER");
 
         if (lobbyId == null || user == null) {
@@ -35,49 +45,71 @@ public class GameWebSocketHandler extends TextWebSocketHandler {
             return;
         }
 
-        Lobby lobby = lobbyManager.get(lobbyId);
-        if (lobby == null) {
+        Lobby lobby;
+        try {
+            lobby = lobbyService.getLobby(lobbyId);
+        } catch (LobbyService.LobbyNotFoundException exception) {
             session.close(CloseStatus.POLICY_VIOLATION);
             return;
         }
 
-        try {
-            lobby.handlePlayerJoin(user.getUserId(), user.getUsername(), session);
-        } catch (IllegalStateException exception) {
+        if (!lobby.hasMember(user.getUserId())) {
             session.close(CloseStatus.POLICY_VIOLATION);
             return;
         }
-        lobby.sendSnapshot(session);
+
+        connectionManager.register(lobbyId, user.getUserId(), session);
+        connectionManager.broadcast(
+                lobbyId,
+                new PlayerReconnectedMessage(user.getUserId(), user.getUsername()));
+        connectionManager.sendSnapshot(lobby, session);
 
         System.out.println("Verified User: " + user.getUsername() + " (ID: " + user.getUserId() + ") entered Lobby: " + lobbyId);
     }
 
     @Override
     protected void handleTextMessage(WebSocketSession session, TextMessage message) throws Exception {
-        String lobbyId = (String) session.getAttributes().get("LOBBY_ID");
-        Lobby lobby = lobbyManager.get(lobbyId);
+        Integer lobbyId = (Integer) session.getAttributes().get("LOBBY_ID");
+        Lobby lobby;
+        try {
+            lobby = lobbyService.getLobby(lobbyId);
+        } catch (LobbyService.LobbyNotFoundException exception) {
+            return;
+        }
 
-        if(lobby != null) {
-            try {
+        try {
                 String payload = message.getPayload();
                 LobbyMessage lobbyMessage = objectMapper.readValue(payload, LobbyMessage.class);
 
-                lobby.handlePlayerMessage(session, lobbyMessage);
-            } catch (Exception e) {
-                System.err.println("Jack Son😂 parsowanie nie zadziałało (ai nie dało emotki)");
-            }
+                commandDispatcher.dispatch(
+                        lobbyId,
+                        session.getId(),
+                        lobbyMessage);
+        } catch (Exception exception) {
+            System.err.println("Could not process lobby WebSocket message: "
+                    + exception.getMessage());
         }
     }
 
     @Override
     public void afterConnectionClosed(WebSocketSession session, CloseStatus status) throws Exception {
-        String lobbyId = (String) session.getAttributes().get("LOBBY_ID");
+        Integer lobbyId = (Integer) session.getAttributes().get("LOBBY_ID");
         UserSessionDto user = (UserSessionDto) session.getAttributes().get("USER");
 
         if (lobbyId != null && user != null) {
-            Lobby lobby = lobbyManager.get(lobbyId);
-            if (lobby != null) {
-                lobby.handlePlayerDisconnect(user.getUserId(), session.getId());
+            try {
+                Lobby lobby = lobbyService.getLobby(lobbyId);
+                if (connectionManager.disconnect(
+                        lobbyId, user.getUserId(), session.getId())) {
+                    lobby.getMember(user.getUserId()).ifPresent(member ->
+                            connectionManager.broadcast(
+                                    lobbyId,
+                                    new PlayerDisconnectedMessage(
+                                            user.getUserId(),
+                                            member.getUsername())));
+                }
+            } catch (LobbyService.LobbyNotFoundException exception) {
+                // The lobby was already deleted.
             }
         }
     }

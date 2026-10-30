@@ -10,7 +10,7 @@ class LobbyMembershipTest {
 
     @Test
     void leavingHostTransfersHostToLowestRemainingUserId() {
-        Lobby lobby = new Lobby("lobby-1", "Test lobby", 10, null, 4);
+        Lobby lobby = new Lobby(1, "Test lobby", 10, null, 4);
         lobby.addMember(10, "Host");
         lobby.addMember(20, "Bob");
         lobby.addMember(15, "Alice");
@@ -24,7 +24,7 @@ class LobbyMembershipTest {
 
     @Test
     void removingLastMemberLeavesEmptyLobby() {
-        Lobby lobby = new Lobby("lobby-1", "Test lobby", 10, null, 4);
+        Lobby lobby = new Lobby(1, "Test lobby", 10, null, 4);
         lobby.addMember(10, "Host");
 
         assertTrue(lobby.removeMember(10));

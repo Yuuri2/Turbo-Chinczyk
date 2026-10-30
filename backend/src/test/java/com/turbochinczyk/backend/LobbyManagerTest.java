@@ -4,6 +4,7 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
@@ -49,17 +50,7 @@ class LobbyManagerTest {
     }
 
     @Test
-    void onlyHostCanDeleteLobby() {
-        Lobby lobby = lobbyManager.createLobby("Test lobby", 7, null, 4);
-
-        assertEquals(
-                LobbyManager.DeleteLobbyResult.NOT_HOST,
-                lobbyManager.deleteLobby(lobby.getLobbyId(), 8));
-        assertNotNull(lobbyManager.get(lobby.getLobbyId()));
-
-        assertEquals(
-                LobbyManager.DeleteLobbyResult.DELETED,
-                lobbyManager.deleteLobby(lobby.getLobbyId(), 7));
-        assertNull(lobbyManager.get(lobby.getLobbyId()));
+    void deletingUnknownLobbyReportsNoRemoval() {
+        assertFalse(lobbyManager.deleteLobby(999));
     }
 }

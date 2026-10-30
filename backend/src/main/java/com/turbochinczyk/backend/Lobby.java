@@ -1,51 +1,38 @@
 package com.turbochinczyk.backend;
 
-import com.turbochinczyk.backend.message.LobbyMessage;
-import com.turbochinczyk.backend.message.PlayerJoinedMessage;
-import com.turbochinczyk.backend.message.PlayerLeftMessage;
-import com.turbochinczyk.backend.message.LobbySnapshotMessage;
-import com.turbochinczyk.backend.message.PlayerReadyMessage;
-import com.turbochinczyk.backend.message.PlayerReconnectedMessage;
-import com.turbochinczyk.backend.message.PlayerDisconnectedMessage;
-import org.springframework.web.socket.WebSocketSession;
-import tools.jackson.databind.ObjectMapper;
-
-import java.io.IOException;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
 public class Lobby {
-    private static final ObjectMapper MAPPER = new ObjectMapper();
     public static final int DEFAULT_MAX_PLAYERS = 4;
 
-    private final String lobbyId;
+    private final int lobbyId;
     private final String name;
     private int hostId;
     private final String password;
     private final ConcurrentHashMap<Integer, Player> players = new ConcurrentHashMap<>();
-    private final ConcurrentHashMap<Integer, WebSocketSession> connections =
-            new ConcurrentHashMap<>();
     private final int maxPlayers;
     private LobbyStatus status;
 
-    public Lobby(String lobbyId) {
+    public Lobby(int lobbyId) {
         this(lobbyId, "Lobby", 0, null, DEFAULT_MAX_PLAYERS);
     }
 
-    public Lobby(String lobbyId, int maxPlayers) {
+    public Lobby(int lobbyId, int maxPlayers) {
         this(lobbyId, "Lobby", 0, null, maxPlayers);
     }
 
     public Lobby(
-            String lobbyId,
+            int lobbyId,
             String name,
             int hostId,
             String password,
             int maxPlayers) {
-        if (lobbyId == null || lobbyId.isBlank()) {
-            throw new IllegalArgumentException("Lobby ID must not be blank");
+        if (lobbyId <= 0) {
+            throw new IllegalArgumentException("Lobby ID must be positive");
         }
         if (name == null || name.isBlank()) {
             throw new IllegalArgumentException("Lobby name must not be blank");
@@ -62,7 +49,7 @@ public class Lobby {
         this.status = LobbyStatus.WAITING;
     }
 
-    public String getLobbyId() {
+    public int getLobbyId() {
         return lobbyId;
     }
 
@@ -80,6 +67,10 @@ public class Lobby {
 
     public Optional<Player> getHost() {
         return Optional.ofNullable(players.get(hostId));
+    }
+
+    public Optional<Player> getMember(int userId) {
+        return Optional.ofNullable(players.get(userId));
     }
 
     public boolean isPasswordProtected() {
@@ -134,13 +125,17 @@ public class Lobby {
     }
 
     public synchronized LobbySnapshot snapshot() {
+        return snapshot(Set.of());
+    }
+
+    public synchronized LobbySnapshot snapshot(Set<Integer> connectedUserIds) {
         List<PlayerSnapshot> playerSnapshots = players.values()
                 .stream()
                 .sorted(Comparator.comparingInt(Player::getUserId))
                 .map(player -> new PlayerSnapshot(
                         player.getUserId(),
                         player.getUsername(),
-                        connections.containsKey(player.getUserId()),
+                        connectedUserIds.contains(player.getUserId()),
                         player.isReady()))
                 .toList();
 
@@ -154,32 +149,6 @@ public class Lobby {
                 playerSnapshots);
     }
 
-    public synchronized void handlePlayerJoin(
-            int userId,
-            String username,
-            WebSocketSession session) {
-        Player existingPlayer = players.get(userId);
-
-        if (existingPlayer != null) {
-            connectPlayer(userId, session);
-            broadcast(new PlayerReconnectedMessage(userId, existingPlayer.getUsername()));
-            return;
-        }
-
-        if (!isJoinable()) {
-            throw new IllegalStateException("Lobby is full or no longer accepting players");
-        }
-
-        Player newPlayer = new Player(userId, username);
-        players.put(userId, newPlayer);
-        connectPlayer(userId, session);
-        broadcast(new PlayerJoinedMessage(userId, username));
-    }
-
-    public synchronized void handlePlayerDisconnect(int userId, String sessionId) {
-        disconnectPlayer(userId, sessionId);
-    }
-
     public synchronized void addMember(int userId, String username) {
         if (players.containsKey(userId)) {
             return;
@@ -188,28 +157,6 @@ public class Lobby {
             throw new IllegalStateException("Lobby is full or no longer accepting players");
         }
         players.put(userId, new Player(userId, username));
-        broadcast(new PlayerJoinedMessage(userId, username));
-    }
-
-    public synchronized void connectPlayer(int userId, WebSocketSession session) {
-        if (session == null) {
-            throw new IllegalArgumentException("WebSocket session must not be null");
-        }
-        if (!players.containsKey(userId)) {
-            throw new IllegalStateException("User is not a member of this lobby");
-        }
-        connections.put(userId, session);
-    }
-
-    public synchronized void disconnectPlayer(int userId, String sessionId) {
-        Player player = players.get(userId);
-        WebSocketSession currentSession = connections.get(userId);
-        if (player != null
-                && currentSession != null
-                && currentSession.getId().equals(sessionId)
-                && connections.remove(userId, currentSession)) {
-            broadcast(new PlayerDisconnectedMessage(userId, player.getUsername()));
-        }
     }
 
     public synchronized boolean removeMember(int userId) {
@@ -218,13 +165,9 @@ public class Lobby {
             return false;
         }
 
-        connections.remove(userId);
         if (userId == hostId && !players.isEmpty()) {
             hostId = players.keySet().stream().min(Integer::compareTo).orElseThrow();
         }
-        broadcast(new PlayerLeftMessage(
-                userId,
-                removedPlayer.getUsername()));
         return true;
     }
 
@@ -237,44 +180,12 @@ public class Lobby {
             throw new IllegalStateException("Lobby is no longer waiting");
         }
         player.setReady(ready);
-        broadcast(new PlayerReadyMessage(
-                userId,
-                player.getUsername(),
-                ready));
     }
 
     private void requireHost(int userId) {
         if (!isHost(userId)) {
             throw new IllegalStateException("Only the host can change lobby status");
         }
-    }
-
-    public void handlePlayerMessage(WebSocketSession session, LobbyMessage message){
-        System.out.printf("W in the chat: %s\n", message.toString());
-    }
-
-    public synchronized void sendSnapshot(WebSocketSession session) throws IOException {
-        String json = MAPPER.writeValueAsString(
-                new LobbySnapshotMessage(snapshot()));
-        if (session.isOpen()) {
-            session.sendMessage(new org.springframework.web.socket.TextMessage(json));
-        }
-    }
-
-    public void broadcast(LobbyMessage message) {
-        // writeValueAsString w Jackson 3.x rzuca unchecked JacksonException,
-        // więc nie trzeba już try/catch tylko na potrzeby kompilacji
-        String json = MAPPER.writeValueAsString(message);
-
-        connections.values().forEach(session -> {
-            try {
-                if (session.isOpen()) {
-                    session.sendMessage(new org.springframework.web.socket.TextMessage(json));
-                }
-            } catch (IOException e) {
-                // Zerwane połączenie, obsłużone przy heartbeat/disconnect
-            }
-        });
     }
 
     public enum LobbyStatus {
@@ -284,7 +195,7 @@ public class Lobby {
     }
 
     public record LobbySnapshot(
-            String lobbyId,
+            int lobbyId,
             String name,
             int hostId,
             LobbyStatus status,

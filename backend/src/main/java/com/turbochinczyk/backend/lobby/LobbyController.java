@@ -1,7 +1,6 @@
 package com.turbochinczyk.backend.lobby;
 
 import com.turbochinczyk.backend.Lobby;
-import com.turbochinczyk.backend.LobbyManager;
 import com.turbochinczyk.backend.database.AuthService;
 import com.turbochinczyk.backend.database.UserSessionDto;
 import jakarta.servlet.http.Cookie;
@@ -22,21 +21,17 @@ import java.util.List;
 @RestController
 @RequestMapping("/api/lobbies")
 public class LobbyController {
-    private final LobbyManager lobbyManager;
+    private final LobbyService lobbyService;
     private final AuthService authService;
 
-    public LobbyController(LobbyManager lobbyManager, AuthService authService) {
-        this.lobbyManager = lobbyManager;
+    public LobbyController(LobbyService lobbyService, AuthService authService) {
+        this.lobbyService = lobbyService;
         this.authService = authService;
     }
 
     @GetMapping
     public List<Lobby.LobbySnapshot> listLobbies() {
-        return lobbyManager.listLobbies()
-                .stream()
-                .filter(Lobby::isJoinable)
-                .map(Lobby::snapshot)
-                .toList();
+        return lobbyService.listJoinableLobbies();
     }
 
     @PostMapping
@@ -45,74 +40,65 @@ public class LobbyController {
             HttpServletRequest httpRequest) {
         UserSessionDto user = requireUser(httpRequest);
 
-        Lobby lobby = lobbyManager.createLobby(
-                request.name(),
-                user.getUserId(),
-                request.password(),
-                request.maxPlayers());
-
-        lobby.addMember(user.getUserId(), user.getUsername());
-
         return ResponseEntity
                 .status(HttpStatus.CREATED)
-                .body(lobby.snapshot());
+                .body(lobbyService.createLobby(
+                        request.name(),
+                        user,
+                        request.password(),
+                        request.maxPlayers()));
     }
 
     @GetMapping("/{lobbyId}")
-    public Lobby.LobbySnapshot getLobby(@PathVariable String lobbyId) {
-        Lobby lobby = lobbyManager.get(lobbyId);
-        if (lobby == null) {
+    public Lobby.LobbySnapshot getLobby(@PathVariable int lobbyId) {
+        try {
+            return lobbyService.getLobby(lobbyId).snapshot();
+        } catch (LobbyService.LobbyNotFoundException exception) {
             throw new ResponseStatusException(
                     HttpStatus.NOT_FOUND,
                     "Lobby does not exist");
         }
-
-        return lobby.snapshot();
     }
 
     @PostMapping("/{lobbyId}/join")
     public Lobby.LobbySnapshot joinLobby(
-            @PathVariable String lobbyId,
+            @PathVariable int lobbyId,
             @RequestBody JoinLobbyRequest request,
             HttpServletRequest httpRequest) {
         UserSessionDto user = requireUser(httpRequest);
-        Lobby lobby = lobbyManager.get(lobbyId);
-
-        if (lobby == null) {
+        try {
+            return lobbyService.joinLobby(
+                    lobbyId,
+                    user,
+                    request.password());
+        } catch (LobbyService.LobbyNotFoundException exception) {
             throw new ResponseStatusException(
                     HttpStatus.NOT_FOUND,
                     "Lobby does not exist");
-        }
-
-        if (!lobby.hasCorrectPassword(request.password())) {
+        } catch (LobbyService.IncorrectLobbyPasswordException exception) {
             throw new ResponseStatusException(
                     HttpStatus.FORBIDDEN,
                     "Incorrect lobby password");
-        }
-
-        try {
-            lobby.addMember(user.getUserId(), user.getUsername());
         } catch (IllegalStateException exception) {
             throw new ResponseStatusException(
                     HttpStatus.CONFLICT,
                     exception.getMessage(),
                     exception);
         }
-
-        return lobby.snapshot();
     }
 
     @PostMapping("/{lobbyId}/leave")
     public void leaveLobby(
-            @PathVariable String lobbyId,
+            @PathVariable int lobbyId,
             HttpServletRequest httpRequest) {
         UserSessionDto user = requireUser(httpRequest);
-        if (lobbyManager.get(lobbyId) == null) {
+        try {
+            lobbyService.leaveLobby(lobbyId, user.getUserId());
+        } catch (LobbyService.LobbyNotFoundException exception) {
             throw new ResponseStatusException(
                     HttpStatus.NOT_FOUND,
                     "Lobby does not exist");
-        }
-        if (!lobbyManager.removeMember(lobbyId, user.getUserId())) {
+        } catch (LobbyService.LobbyMemberNotFoundException exception) {
             throw new ResponseStatusException(
                     HttpStatus.NOT_FOUND,
                     "User is not a member of this lobby");
@@ -121,18 +107,16 @@ public class LobbyController {
 
     @DeleteMapping("/{lobbyId}")
     public void deleteLobby(
-            @PathVariable String lobbyId,
+            @PathVariable int lobbyId,
             HttpServletRequest httpRequest) {
         UserSessionDto user = requireUser(httpRequest);
-        LobbyManager.DeleteLobbyResult result =
-                lobbyManager.deleteLobby(lobbyId, user.getUserId());
-
-        if (result == LobbyManager.DeleteLobbyResult.NOT_FOUND) {
+        try {
+            lobbyService.deleteLobby(lobbyId, user.getUserId());
+        } catch (LobbyService.LobbyNotFoundException exception) {
             throw new ResponseStatusException(
                     HttpStatus.NOT_FOUND,
                     "Lobby does not exist");
-        }
-        if (result == LobbyManager.DeleteLobbyResult.NOT_HOST) {
+        } catch (LobbyService.LobbyAccessDeniedException exception) {
             throw new ResponseStatusException(
                     HttpStatus.FORBIDDEN,
                     "Only the host can delete the lobby");
@@ -141,66 +125,63 @@ public class LobbyController {
 
     @PostMapping("/{lobbyId}/start")
     public Lobby.LobbySnapshot startGame(
-            @PathVariable String lobbyId,
+            @PathVariable int lobbyId,
             HttpServletRequest httpRequest) {
         UserSessionDto user = requireUser(httpRequest);
-        LobbyManager.LobbyStatusResult result =
-                lobbyManager.startGame(lobbyId, user.getUserId());
-        if (result == LobbyManager.LobbyStatusResult.NOT_FOUND) {
+        try {
+            return lobbyService.startGame(lobbyId, user.getUserId());
+        } catch (LobbyService.LobbyNotFoundException exception) {
             throw new ResponseStatusException(
                     HttpStatus.NOT_FOUND,
                     "Lobby does not exist");
-        }
-        if (result == LobbyManager.LobbyStatusResult.REJECTED) {
+        } catch (IllegalStateException exception) {
             throw new ResponseStatusException(
                     HttpStatus.CONFLICT,
-                    "Lobby cannot be started by this request");
+                    exception.getMessage(),
+                    exception);
         }
-        return lobbyManager.get(lobbyId).snapshot();
     }
 
     @PostMapping("/{lobbyId}/ready")
     public Lobby.LobbySnapshot setReady(
-            @PathVariable String lobbyId,
+            @PathVariable int lobbyId,
             @RequestBody ReadyRequest request,
             HttpServletRequest httpRequest) {
         UserSessionDto user = requireUser(httpRequest);
-        LobbyManager.LobbyStatusResult result =
-                lobbyManager.setPlayerReady(
-                        lobbyId,
-                        user.getUserId(),
-                        request.ready());
-        if (result == LobbyManager.LobbyStatusResult.NOT_FOUND) {
+        try {
+            return lobbyService.setReady(
+                    lobbyId,
+                    user.getUserId(),
+                    request.ready());
+        } catch (LobbyService.LobbyNotFoundException exception) {
             throw new ResponseStatusException(
                     HttpStatus.NOT_FOUND,
                     "Lobby does not exist");
-        }
-        if (result == LobbyManager.LobbyStatusResult.REJECTED) {
+        } catch (IllegalStateException exception) {
             throw new ResponseStatusException(
                     HttpStatus.CONFLICT,
-                    "Player readiness cannot be changed");
+                    exception.getMessage(),
+                    exception);
         }
-        return lobbyManager.get(lobbyId).snapshot();
     }
 
     @PostMapping("/{lobbyId}/finish")
     public Lobby.LobbySnapshot finishGame(
-            @PathVariable String lobbyId,
+            @PathVariable int lobbyId,
             HttpServletRequest httpRequest) {
         UserSessionDto user = requireUser(httpRequest);
-        LobbyManager.LobbyStatusResult result =
-                lobbyManager.finishGame(lobbyId, user.getUserId());
-        if (result == LobbyManager.LobbyStatusResult.NOT_FOUND) {
+        try {
+            return lobbyService.finishGame(lobbyId, user.getUserId());
+        } catch (LobbyService.LobbyNotFoundException exception) {
             throw new ResponseStatusException(
                     HttpStatus.NOT_FOUND,
                     "Lobby does not exist");
-        }
-        if (result == LobbyManager.LobbyStatusResult.REJECTED) {
+        } catch (IllegalStateException exception) {
             throw new ResponseStatusException(
                     HttpStatus.CONFLICT,
-                    "Lobby is not currently playing");
+                    exception.getMessage(),
+                    exception);
         }
-        return lobbyManager.get(lobbyId).snapshot();
     }
 
     private UserSessionDto requireUser(HttpServletRequest request) {

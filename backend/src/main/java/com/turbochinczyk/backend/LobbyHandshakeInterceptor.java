@@ -34,7 +34,13 @@ public class LobbyHandshakeInterceptor extends HttpSessionHandshakeInterceptor {
             response.setStatusCode(HttpStatus.BAD_REQUEST);
             return false;
         }
-        String lobbyId = pathSegments[pathSegments.length - 1];
+        int lobbyId;
+        try {
+            lobbyId = Integer.parseInt(pathSegments[pathSegments.length - 1]);
+        } catch (NumberFormatException exception) {
+            response.setStatusCode(HttpStatus.BAD_REQUEST);
+            return false;
+        }
 
         Lobby lobby = lobbyManager.get(lobbyId);
         if (lobby == null) {

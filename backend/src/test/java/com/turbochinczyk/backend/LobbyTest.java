@@ -1,10 +1,7 @@
 package com.turbochinczyk.backend;
 
 import org.junit.jupiter.api.Test;
-import org.springframework.web.socket.WebSocketSession;
 
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.when;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -14,7 +11,7 @@ class LobbyTest {
 
     @Test
     void newLobbyStartsWaitingAndHasNoMembers() {
-        Lobby lobby = new Lobby("lobby-1", "Test lobby", 1, null, 4);
+        Lobby lobby = new Lobby(1, "Test lobby", 1, null, 4);
 
         assertEquals(Lobby.LobbyStatus.WAITING, lobby.getStatus());
         assertEquals(0, lobby.getPlayerCount());
@@ -23,7 +20,7 @@ class LobbyTest {
 
     @Test
     void membersCanJoinUntilLobbyReachesCapacity() {
-        Lobby lobby = new Lobby("lobby-1", "Test lobby", 1, null, 2);
+        Lobby lobby = new Lobby(1, "Test lobby", 1, null, 2);
 
         lobby.addMember(1, "Alice");
         lobby.addMember(2, "Bob");
@@ -34,7 +31,7 @@ class LobbyTest {
 
     @Test
     void joiningFullLobbyIsRejected() {
-        Lobby lobby = new Lobby("lobby-1", "Test lobby", 1, null, 1);
+        Lobby lobby = new Lobby(1, "Test lobby", 1, null, 1);
         lobby.addMember(1, "Alice");
 
         assertThrows(
@@ -43,17 +40,8 @@ class LobbyTest {
     }
 
     @Test
-    void nullWebSocketSessionIsRejected() {
-        Lobby lobby = new Lobby("lobby-1", "Test lobby", 1, null, 4);
-
-        assertThrows(
-                IllegalArgumentException.class,
-                () -> lobby.connectPlayer(1, null));
-    }
-
-    @Test
     void joiningExistingMemberIsIdempotent() {
-        Lobby lobby = new Lobby("lobby-1", "Test lobby", 1, null, 2);
+        Lobby lobby = new Lobby(1, "Test lobby", 1, null, 2);
         lobby.addMember(1, "Alice");
 
         lobby.addMember(1, "Alice");
@@ -64,7 +52,7 @@ class LobbyTest {
 
     @Test
     void snapshotReportsHttpCreatedMembersAsOffline() {
-        Lobby lobby = new Lobby("lobby-1", "Test lobby", 1, null, 2);
+        Lobby lobby = new Lobby(1, "Test lobby", 1, null, 2);
         lobby.addMember(1, "Alice");
 
         Lobby.PlayerSnapshot player = lobby.snapshot().players().getFirst();
@@ -76,7 +64,7 @@ class LobbyTest {
 
     @Test
     void passwordIsKeptPrivateAndValidatedInMemory() {
-        Lobby lobby = new Lobby("lobby-1", "Private lobby", 1, "secret", 4);
+        Lobby lobby = new Lobby(1, "Private lobby", 1, "secret", 4);
 
         assertTrue(lobby.isPasswordProtected());
         assertTrue(lobby.hasCorrectPassword("secret"));
@@ -86,7 +74,7 @@ class LobbyTest {
 
     @Test
     void blankPasswordCreatesPublicLobby() {
-        Lobby lobby = new Lobby("lobby-1", "Public lobby", 1, "  ", 4);
+        Lobby lobby = new Lobby(1, "Public lobby", 1, "  ", 4);
 
         assertFalse(lobby.isPasswordProtected());
         assertTrue(lobby.hasCorrectPassword(null));
@@ -94,7 +82,7 @@ class LobbyTest {
 
     @Test
     void hostCanStartAndFinishGame() {
-        Lobby lobby = new Lobby("lobby-1", "Test lobby", 1, null, 4);
+        Lobby lobby = new Lobby(1, "Test lobby", 1, null, 4);
         lobby.addMember(1, "Alice");
         lobby.setPlayerReady(1, true);
 
@@ -107,7 +95,7 @@ class LobbyTest {
 
     @Test
     void nonHostCannotStartGame() {
-        Lobby lobby = new Lobby("lobby-1", "Test lobby", 1, null, 4);
+        Lobby lobby = new Lobby(1, "Test lobby", 1, null, 4);
         lobby.addMember(1, "Alice");
 
         assertThrows(
@@ -117,7 +105,7 @@ class LobbyTest {
 
     @Test
     void nonHostCannotFinishGame() {
-        Lobby lobby = new Lobby("lobby-1", "Test lobby", 1, null, 4);
+        Lobby lobby = new Lobby(1, "Test lobby", 1, null, 4);
         lobby.addMember(1, "Alice");
         lobby.setPlayerReady(1, true);
         lobby.startGame(1);
@@ -129,7 +117,7 @@ class LobbyTest {
 
     @Test
     void allMembersMustBeReadyBeforeStarting() {
-        Lobby lobby = new Lobby("lobby-1", "Test lobby", 1, null, 4);
+        Lobby lobby = new Lobby(1, "Test lobby", 1, null, 4);
         lobby.addMember(1, "Alice");
         lobby.addMember(2, "Bob");
 
@@ -146,7 +134,7 @@ class LobbyTest {
 
     @Test
     void readinessIsIncludedInSnapshot() {
-        Lobby lobby = new Lobby("lobby-1", "Test lobby", 1, null, 4);
+        Lobby lobby = new Lobby(1, "Test lobby", 1, null, 4);
         lobby.addMember(1, "Alice");
         lobby.setPlayerReady(1, true);
 
@@ -154,36 +142,11 @@ class LobbyTest {
     }
 
     @Test
-    void reconnectReplacesCurrentConnection() {
-        Lobby lobby = new Lobby("lobby-1", "Test lobby", 1, null, 4);
+    void snapshotsCanReportConnectedMembers() {
+        Lobby lobby = new Lobby(1, "Test lobby", 1, null, 4);
         lobby.addMember(1, "Alice");
-        WebSocketSession firstSession = openSession("session-1");
-        WebSocketSession secondSession = openSession("session-2");
 
-        lobby.connectPlayer(1, firstSession);
-        lobby.connectPlayer(1, secondSession);
-
-        lobby.disconnectPlayer(1, firstSession.getId());
-
-        assertTrue(lobby.snapshot().players().getFirst().online());
-    }
-
-    @Test
-    void currentConnectionBecomesOfflineAfterDisconnect() {
-        Lobby lobby = new Lobby("lobby-1", "Test lobby", 1, null, 4);
-        lobby.addMember(1, "Alice");
-        WebSocketSession session = openSession("session-1");
-
-        lobby.connectPlayer(1, session);
-        lobby.disconnectPlayer(1, session.getId());
-
+        assertTrue(lobby.snapshot(java.util.Set.of(1)).players().getFirst().online());
         assertFalse(lobby.snapshot().players().getFirst().online());
-    }
-
-    private WebSocketSession openSession(String sessionId) {
-        WebSocketSession session = mock(WebSocketSession.class);
-        when(session.getId()).thenReturn(sessionId);
-        when(session.isOpen()).thenReturn(true);
-        return session;
     }
 }

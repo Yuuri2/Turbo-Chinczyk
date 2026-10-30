@@ -3,6 +3,7 @@ package com.turbochinczyk.backend.websocket;
 import com.turbochinczyk.backend.Lobby;
 import com.turbochinczyk.backend.LobbyManager;
 import com.turbochinczyk.backend.database.UserSessionDto;
+import com.turbochinczyk.backend.lobby.LobbyService;
 import org.junit.jupiter.api.Test;
 import org.springframework.web.socket.CloseStatus;
 import org.springframework.web.socket.WebSocketSession;
@@ -20,10 +21,18 @@ class GameWebSocketHandlerTest {
     @Test
     void connectionToMissingLobbyIsRejected() throws Exception {
         LobbyManager lobbyManager = new LobbyManager();
+        LobbyConnectionManager connectionManager =
+                new LobbyConnectionManager(new ObjectMapper());
         GameWebSocketHandler handler =
-                new GameWebSocketHandler(lobbyManager, new ObjectMapper());
+                new GameWebSocketHandler(
+                        new LobbyService(lobbyManager),
+                        connectionManager,
+                        new LobbyCommandDispatcher(
+                                new LobbyService(lobbyManager),
+                                connectionManager),
+                        new ObjectMapper());
         WebSocketSession session = sessionWithAttributes(
-                "missing",
+                999,
                 new UserSessionDto(1, "Alice"));
 
         handler.afterConnectionEstablished(session);
@@ -35,9 +44,17 @@ class GameWebSocketHandlerTest {
     void connectionWithoutUserIsRejected() throws Exception {
         LobbyManager lobbyManager = new LobbyManager();
         Lobby lobby = lobbyManager.createLobby("Test lobby", 1, null, 4);
+        LobbyConnectionManager connectionManager =
+                new LobbyConnectionManager(new ObjectMapper());
         WebSocketSession session = sessionWithAttributes(lobby.getLobbyId(), null);
         GameWebSocketHandler handler =
-                new GameWebSocketHandler(lobbyManager, new ObjectMapper());
+                new GameWebSocketHandler(
+                        new LobbyService(lobbyManager),
+                        connectionManager,
+                        new LobbyCommandDispatcher(
+                                new LobbyService(lobbyManager),
+                                connectionManager),
+                        new ObjectMapper());
 
         handler.afterConnectionEstablished(session);
 
@@ -45,7 +62,7 @@ class GameWebSocketHandlerTest {
     }
 
     private WebSocketSession sessionWithAttributes(
-            String lobbyId,
+            int lobbyId,
             UserSessionDto user) {
         WebSocketSession session = mock(WebSocketSession.class);
         Map<String, Object> attributes = new HashMap<>();
