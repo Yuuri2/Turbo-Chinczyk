@@ -19,6 +19,24 @@ import static org.mockito.Mockito.when;
 class LobbyControllerTest {
 
     @Test
+    void createLobbyWithoutSessionCookieIsUnauthorized() {
+        LobbyController controller = new LobbyController(
+                mock(LobbyService.class),
+                mock(AuthService.class),
+                mock(LobbyConnectionManager.class));
+
+        MockHttpServletRequest request = new MockHttpServletRequest();
+
+        ResponseStatusException exception = assertThrows(
+                ResponseStatusException.class,
+                () -> controller.createLobby(
+                        new LobbyController.CreateLobbyRequest("Test lobby", null, 4),
+                        request));
+
+        assertEquals(401, exception.getStatusCode().value());
+    }
+
+    @Test
     void createLobbyUsesTheAuthenticatedCookieUser() {
         LobbyService service = mock(LobbyService.class);
         AuthService authService = mock(AuthService.class);
