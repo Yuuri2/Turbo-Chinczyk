@@ -23,10 +23,13 @@ class GameWebSocketHandlerTest {
         LobbyManager lobbyManager = new LobbyManager();
         LobbyConnectionManager connectionManager =
                 new LobbyConnectionManager(new ObjectMapper());
+        LobbyWebSocketService webSocketService =
+                new LobbyWebSocketService(
+                        new LobbyService(lobbyManager),
+                        connectionManager);
         GameWebSocketHandler handler =
                 new GameWebSocketHandler(
-                        new LobbyService(lobbyManager),
-                        connectionManager,
+                        webSocketService,
                         new LobbyCommandDispatcher(
                                 new LobbyService(lobbyManager),
                                 connectionManager),
@@ -46,11 +49,14 @@ class GameWebSocketHandlerTest {
         Lobby lobby = lobbyManager.createLobby("Test lobby", 1, null, 4);
         LobbyConnectionManager connectionManager =
                 new LobbyConnectionManager(new ObjectMapper());
+        LobbyWebSocketService webSocketService =
+                new LobbyWebSocketService(
+                        new LobbyService(lobbyManager),
+                        connectionManager);
         WebSocketSession session = sessionWithAttributes(lobby.getLobbyId(), null);
         GameWebSocketHandler handler =
                 new GameWebSocketHandler(
-                        new LobbyService(lobbyManager),
-                        connectionManager,
+                        webSocketService,
                         new LobbyCommandDispatcher(
                                 new LobbyService(lobbyManager),
                                 connectionManager),
