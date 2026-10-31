@@ -184,16 +184,41 @@ Albo po prostu poczekaj godzinę.
 
 ## 6. Uruchomienie aplikacji na VM
 
+VM **nie buduje obrazów** (za mało RAM). Obrazy backendu i frontendu są budowane poza VM i leżą w GHCR
+(publiczne, pull bez logowania): `ghcr.io/yuuri2/turbo-chinczyk-backend`, `ghcr.io/yuuri2/turbo-chinczyk-frontend`.
+Z repo na VM potrzebne są tylko `docker-compose.yml`, `nginx/default.conf` i `baza/init.sql`.
+
+Pierwsze uruchomienie:
 ```bash
 git clone https://github.com/Yuuri2/Turbo-Chinczyk.git
 cd Turbo-Chinczyk
-nano .env          # co najmniej POSTGRES_PASSWORD=...
-docker compose build backend && docker compose build frontend   # po kolei – VM ma 4 GB RAM i brak swapu
-docker compose up -d
-docker compose ps
+nano .env          # co najmniej POSTGRES_PASSWORD=...; ORIGIN=http://<IP>
+./scripts/deploy.sh
 ```
 
+Kolejne wersje: `./scripts/deploy.sh` (git pull + `docker compose pull` + `up -d`).
+Konkretna wersja / rollback: `IMAGE_TAG=sha-abc1234 ./scripts/deploy.sh`.
+
+> Na VM używaj zawsze `docker compose -f docker-compose.yml ...` – bez `-f` compose dokleja
+> `docker-compose.override.yml`, który próbuje budować obrazy.
+
 Aplikacja: `http://<IP>/`.
+
+### Publikacja obrazów (do czasu pipeline'u CI)
+
+Z komputera dewelopera, po `docker login ghcr.io` (PAT z `write:packages`):
+```bash
+./scripts/push-images.sh             # tagi latest + sha-<commit>
+```
+Po pierwszym pushu jednorazowo ustaw obie paczki jako **Public** (GitHub → Packages → Package settings).
+
+### Migracje bazy
+
+`baza/init.sql` wykonuje się tylko przy pustym wolumenie `pgdata`. Na istniejącej bazie migrację z `baza/migrations/` trzeba
+zaaplikować ręcznie:
+```bash
+docker compose -f docker-compose.yml exec -T db sh -c 'psql -U "$POSTGRES_USER" -d "$POSTGRES_DB"' < baza/migrations/<plik>.sql
+```
 
 ---
 

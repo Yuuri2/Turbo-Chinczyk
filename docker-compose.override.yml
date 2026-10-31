@@ -1,0 +1,15 @@
+#tylko na local build compose sam podczytuje to i nadpisuje
+
+services:
+  db:
+    ports:
+      - "127.0.0.1:5432:5432"
+
+  #Local build
+  backend:
+    build: ./backend
+    pull_policy: build
+
+  frontend:
+    build: ./frontend
+    pull_policy: build

@@ -1,12 +1,19 @@
-# Zależności i artefakty lokalne — obraz robi własne `npm ci` i `npm run build`
+#Zależności i artefakty lokalne — obraz robi własne `npm ci` i `npm run build`
 node_modules/
 build/
 .svelte-kit/
 
-# Lokalna konfiguracja edytora
+#vsCode config
 .vscode/
 
-# Niepotrzebne w obrazie
+#env
+.env
+.env.*
+
+#Niepotrzebne w obrazie
+Dockerfile
+.dockerignore
 .gitignore
 deno.lock
 README.md
+*.log

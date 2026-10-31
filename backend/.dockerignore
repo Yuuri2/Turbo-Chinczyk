@@ -1,6 +1,18 @@
-# Artefakty lokalnego builda — obraz kompiluje od zera w etapie build
+#Artefakty lokalnego builda — obraz kompiluje od zera w etapie build
 target/
 
-# Niepotrzebne w obrazie
+#używa mvn z obrazu maven
+.mvn/
+mvnw
+mvnw.cmd
+
+#env
+.env
+.env.*
+
+#Niepotrzebne w obrazie
+Dockerfile
+.dockerignore
 .gitignore
 .gitattributes
+*.log
